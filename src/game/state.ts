@@ -13,13 +13,26 @@ export const CLOSE_MIN = 17 * 60;
 /** When the light outside turns to evening, then night, on the clinic clock. Night stays after closing. */
 export const EVENING_MIN = 14 * 60 + 30;
 export const NIGHT_MIN = 16 * 60;
-/** Real time one clinic day lasts. `?day=60` in the URL shortens it for testing. */
-export const DAY_MS = Math.max(20, Number(params.get('day')) || 300) * 1000;
+/** Real time one clinic day lasts. `?day=60` in the URL changes it for testing. */
+export const DAY_MS = Math.max(20, Number(params.get('day')) || 180) * 1000;
 /** How long a thermometer takes. The player is free to walk away while it runs. */
 export const THERMO_MS = 7000;
 export const SEAT_COUNT = 3;
-/** Pause between one door decision and the next knock. */
-const KNOCK_GAP_MS: [number, number] = [5000, 11000];
+/** How many times one character may come in a day: once, and once more with something else. */
+const VISITS_EACH = 2;
+/** Three of the cast are on duty each day; everyone else may come as a patient. */
+const VISIT_CAP = (CHAR_IDS.length - 3) * VISITS_EACH;
+/**
+ * The day's visitors are spread over it, not let in as fast as the door is answered: each has a
+ * time before which they do not knock, a slot apart, the last of them leaving room to be seen
+ * before closing.
+ */
+const SLOT_MS = (DAY_MS * 0.9) / VISIT_CAP;
+const FIRST_KNOCK_MS = Math.min(1800, SLOT_MS / 2);
+/** The shortest pause between one door decision and the next knock, for a player running behind. */
+const KNOCK_GAP_MS: [number, number] = [Math.min(4000, SLOT_MS * 0.3), Math.min(7000, SLOT_MS * 0.5)];
+/** How long the clock takes to run on to closing time once the last visitor has gone. */
+const WIND_MS = 1600;
 
 export type GamePhase = 'title' | 'intro' | 'play' | 'summary';
 export const gamePhase = signal<GamePhase>('title');
@@ -57,6 +70,8 @@ export const timeOfDay = computed<TimeOfDay>(() =>
 let nextId = 1;
 let nextKnockAt = 0;
 let lastProblem: ProblemId | null = null;
+/** Clock time added per tick while it runs on to closing, or null while it keeps real time. */
+let windStep: number | null = null;
 
 const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
 const pick = <T>(xs: readonly T[]): T => xs[Math.floor(Math.random() * xs.length)];
@@ -86,17 +101,26 @@ function spawnVisitor() {
   const s = shift.value;
   const onDuty = new Set<CharId>([s.nurse, s.doctor, s.counter]);
   const inside = new Set(patients.value.filter(p => p.where !== 'gone').map(p => p.char));
-  const seenToday = new Set(patients.value.map(p => p.char));
-  // Staff on leave are fair game as patients. Nobody comes twice until everyone has been once.
-  let pool = CHAR_IDS.filter(c => !onDuty.has(c) && !inside.has(c) && !seenToday.has(c));
-  if (!pool.length) pool = CHAR_IDS.filter(c => !onDuty.has(c) && !inside.has(c));
+  const visits = (c: CharId) => patients.value.filter(p => p.char === c).length;
+  // Staff on leave are fair game as patients. Nobody comes twice until everyone has been once,
+  // and nobody comes a third time.
+  const free = CHAR_IDS.filter(c => !onDuty.has(c) && !inside.has(c) && visits(c) < VISITS_EACH);
+  const fewest = Math.min(...free.map(visits));
+  const due = free.filter(c => visits(c) === fewest);
+  // Not straight back in after having just been, if anyone else is due.
+  const lastIn = patients.value.at(-1)?.char;
+  const pool = due.length > 1 ? due.filter(c => c !== lastIn) : due;
   if (!pool.length) {
+    // Everyone still due is inside at the moment; try again shortly.
     nextKnockAt = playMs.value + 4000;
     return;
   }
   const char = pick(pool);
-  // Never the same trouble twice running.
-  const problem = pick(PROBLEM_IDS.filter(id => id !== lastProblem));
+  // Someone coming back has something else wrong this time, and never the same trouble twice running.
+  const had = new Set(patients.value.filter(p => p.char === char).map(p => p.problem));
+  const fresh = PROBLEM_IDS.filter(id => !had.has(id));
+  const notRunning = fresh.filter(id => id !== lastProblem);
+  const problem = pick(notRunning.length ? notRunning : fresh);
   lastProblem = problem;
   const c = PROBLEMS[problem];
   const [lo, hi] = TEMP_RANGE[c.temp];
@@ -133,8 +157,9 @@ export function startDay() {
     paused.value = false;
     gamePhase.value = 'play';
   });
-  nextKnockAt = 1800;
+  nextKnockAt = FIRST_KNOCK_MS;
   lastProblem = null;
+  windStep = null;
   lastTick = performance.now();
 }
 
@@ -165,6 +190,15 @@ export function goTo(s: SceneId) {
 
 // ---- door ----
 
+/**
+ * When the next visitor knocks, decided as the one before is let in or sent home: at their place
+ * in the day's spread, give or take, and never right on the heels of the last.
+ */
+function scheduleKnock() {
+  const due = FIRST_KNOCK_MS + patients.value.length * SLOT_MS + rand(-0.2, 0.2) * SLOT_MS;
+  nextKnockAt = Math.max(playMs.value + rand(...KNOCK_GAP_MS), due);
+}
+
 export function admit(id: number): boolean {
   if (byId(id)?.where !== 'door') return false;
   const taken = new Set(at('waiting').map(p => p.seat));
@@ -172,7 +206,7 @@ export function admit(id: number): boolean {
   if (seat === undefined) return false;
   update(id, p => ({ ...p, where: 'waiting', seat }));
   noteMove(id);
-  nextKnockAt = playMs.value + rand(...KNOCK_GAP_MS);
+  scheduleKnock();
   return true;
 }
 
@@ -181,7 +215,7 @@ export function sendHome(id: number) {
   if (!p || p.where !== 'door') return;
   record(p, 'sentHome');
   update(id, q => ({ ...q, where: 'gone' }));
-  nextKnockAt = playMs.value + rand(...KNOCK_GAP_MS);
+  scheduleKnock();
 }
 
 // ---- waiting room ----
@@ -270,7 +304,11 @@ function tick() {
   lastTick = now;
   if (gamePhase.value !== 'play' || paused.value) return;
 
-  const t = playMs.value + dt;
+  // Once the day's last visitor has come and gone there is nothing left to wait for, so the clock
+  // runs on to closing time instead of leaving the player in an empty clinic.
+  const everyoneCame = patients.value.length >= VISIT_CAP && !patients.value.some(p => p.where !== 'gone');
+  if (everyoneCame && windStep === null && playMs.value < DAY_MS) windStep = (DAY_MS - playMs.value) / (WIND_MS / 100);
+  const t = windStep === null ? playMs.value + dt : Math.min(DAY_MS, playMs.value + windStep);
   playMs.value = t;
 
   for (const p of patients.value) {
@@ -281,7 +319,7 @@ function tick() {
   }
 
   const open = t < DAY_MS;
-  if (open && !at('door').length && t >= nextKnockAt) spawnVisitor();
+  if (open && patients.value.length < VISIT_CAP && !at('door').length && t >= nextKnockAt) spawnVisitor();
   // After closing nobody new arrives, but everyone already here can still be finished.
   if (!open && !patients.value.some(p => p.where !== 'gone')) endDay();
 }

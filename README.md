@@ -16,7 +16,8 @@ on shift in each room.
 
 ## How a day goes
 
-The clinic is open from 9:00 to 17:00. Nothing punishes being slow; you simply help fewer people.
+The clinic is open from 9:00 to 17:00, which is about three minutes of play, and at most ten
+visitors come in a day. Nothing punishes being slow; you simply help fewer people.
 
 **Morning.** The day starts with who is on shift: a nurse, the doctor and someone at the counter.
 The line-up changes from day to day, and anyone who has the day off may turn up as a patient.

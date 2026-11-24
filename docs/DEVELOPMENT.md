@@ -24,7 +24,7 @@ instead and open the "Network" address it prints.
 The game is landscape. A phone held upright shows it turned sideways, so you only turn the phone
 itself; rotation lock does not need to be switched off.
 
-Add `?day=60` to the address to make a clinic day last 60 seconds instead of 5 minutes.
+Add `?day=60` to the address to make a clinic day last 60 seconds instead of 3 minutes.
 
 ## Versions and updates
 
@@ -197,6 +197,10 @@ They disappear for a character as soon as that character has their own drawing o
 - First person as the staff on shift: nurse at the door and waiting room, doctor in the doctor
   room, reception at the counter. Stand-ins take over on leave days.
 - Real-time day, no penalty for slowness.
+- A day is three real minutes and at most ten visits: the five who are not on duty, twice each,
+  the second time with a different trouble. Knocks are spread over the day, and once the last
+  visitor has gone the clock runs on to 17:00 and the clinic closes. The numbers are at the top
+  of `src/game/state.ts`.
 - Japanese by default, English optional.
 - The doctor circles what the throat looked like by hand; close-ups carry no caption.
 - Circling it lets the chart name the trouble by itself when the notes allow. Circling a trouble

@@ -10,6 +10,7 @@ characters/chiikawa.png        (also hachiware, usagi, rakko, shisa, furuhonya,
                                 momonga, kurimanju)
 characters/chiikawa.fever.png  (one per trouble: fever, cold, tummy, bruise, personal)
 characters/chiikawa.sit.png    (sitting: one per character, whatever the trouble)
+characters/usagi.sit.personal.png  (optional: sitting with one trouble, where it shows)
 characters/chiikawa.nurse.png  (in uniform while on shift; also rakko.doctor, usagi.doctor)
 characters/chiikawa.happy.png  (optional: after being helped)
 bg/door.day.webp               (also door.evening, door.night; any room may have these,

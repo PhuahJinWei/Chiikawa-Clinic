@@ -49,8 +49,9 @@ export function Cutout({ char, x, y, s = 1, z = 10, problem, happy, sit, job, go
   const came = useRef(enter).current;
   // Their own drawing of the trouble (momonga.fever.png) wins over the plain one (momonga.png).
   const look = job ?? (happy ? 'happy' : problem);
-  // Seated, a character has one drawing (momonga.sit.png) whatever is wrong with them.
-  const seated = sit ? asset(`characters/${char}.sit`) : undefined;
+  // Seated, a character has one drawing (momonga.sit.png) whatever is wrong with them, unless
+  // the trouble shows while sitting and has a drawing of its own (usagi.sit.personal.png).
+  const seated = sit ? (problem && asset(`characters/${char}.sit.${problem}`)) || asset(`characters/${char}.sit`) : undefined;
   const own = seated || (look && asset(`characters/${char}.${look}`));
   const url = own || asset(`characters/${char}`);
   // Without a drawing of their own for it, the trouble is shown by marks over whatever stands in.

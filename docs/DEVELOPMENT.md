@@ -26,6 +26,22 @@ itself; rotation lock does not need to be switched off.
 
 Add `?day=60` to the address to make a clinic day last 60 seconds instead of 5 minutes.
 
+## Versions and updates
+
+The title screen shows which build is running in its top-right corner, for example
+`v0.1.0  2026-11-24  548f043`: the version from `package.json` (bump it by hand when you want
+to), then the date and short id of the commit the build was made from (automatic).
+
+Every build also writes the same stamp to `version.json`. The published game fetches that file
+fresh when it loads, when its tab comes back into view, and at the end of each day. If the server
+has a different build, the page reloads into it, but only where nothing is lost: on the title
+screen, or between two days (the day number is carried across). If a reload comes back with the
+old build, which can happen for some minutes after a deploy, it waits five minutes before trying
+again. None of this runs under `npm run dev`. The code is in `src/update.ts` and
+`vite.config.ts`.
+
+`npm run preview` serves the built game from `dist/`, which is the way to try this locally.
+
 ## How it plays
 
 | Room | You are | What you do |
@@ -88,7 +104,7 @@ drop in the new PNG with the same name, which wins over the WebP, and delete the
 | `characters/<id>.nurse.png`, `characters/<id>.doctor.png` | The character in uniform, shown while they are on shift: on the title screen, and as their face on the shift card and in the corner. Reception wears the nurse's | 800 x 920 |
 | `characters/<id>.happy.png` | Optional. Shown at the counter once they have been helped; falls back to the plain file | 800 x 920 |
 | `bg/door.png`, `bg/waiting.png`, `bg/doctor.png`, `bg/counter.png` | Room backgrounds | 2400 x 1350 |
-| `bg/title.png` | The title screen: the clinic from outside, with its name on the signboard. The game stands the start signboard on the ground in front of the doors (stage x 730 to 1190, y 800 to 1066) and tapes the language notice to the right-hand door, so keep those plain. The one here is `artifacts/generated/rooms/clinic-exterior-title-day-v2-white-sign.png`. Without it the door view stands in, with `ui/logo` on a board | 2400 x 1350 |
+| `bg/title.png` | The title screen: the clinic from outside, with its name on the signboard. The game stands the start signboard on the ground in front of the doors (stage x 730 to 1190, y 800 to 1066) and tapes the language notice to the right-hand door, so keep those plain. The one here is `artifacts/generated/rooms/clinic-exterior-title-day-v2-white-sign.png`. Without it the door view stands in, with the name written on a board | 2400 x 1350 |
 | `bg/<room>.day.png`, `bg/<room>.evening.png`, `bg/<room>.night.png` | Optional. The same room at three times of day (below). The door has all three; a missing one falls back to the plain file | 2400 x 1350 |
 | `fg/doctor.png`, `fg/counter.png` | Optional. What sits in front of the patient: the edge of the desk, the counter. Leave it out when the background already has it and nobody needs to be behind it, as in the doctor room | 2400 x 1350 |
 | `bg/counter-shelf.png` | The cabinet of fixes, as a transparent layer over the counter wall. The one here was made from `artifacts/generated/rooms/medicine-wall-cabinet-2x3-empty.png` (a cabinet filling its own picture), scaled to 42.3% and set at x 1148, y 214 of the layer. Its six cubbies are where `CABINET` in `src/stage/art.tsx` says; the game stands a fix and its name card inside each of the first five. Without the picture the game draws a stand-in | 2400 x 1350 |
@@ -100,7 +116,7 @@ drop in the new PNG with the same name, which wins over the WebP, and delete the
 | `fixes/<id>.png` | Each thing on the counter's shelf, also shown in the bag (ids below) | 320 x 360 |
 | `items/<character id>.png` | The thing a character's personal trouble is about, shown large on the counter's card (table below) | 500 x 500 |
 | `signs/door.png`, `signs/waiting.png`, `signs/doctor.png`, `signs/counter.png` | The room signs down the left edge | 128 x 128 |
-| `ui/ask.png`, `ui/temp.png`, `ui/go.png` | Small pictures for asking and for the thermometer (on the tickets, the note strip, the chart and the guide), and the arrow the game lays over a room picture on a ticket that sends someone there. Drawn on the same square as the room pictures so the arrow lines up. The ones here, like the room pictures and the penlight, come from `artifacts/generated/buttons/` | 500 x 500 |
+| `ui/ask.png`, `ui/temp.png`, `ui/go.png` | Small pictures for asking and for the thermometer (on the choices, the note strip, the chart and the guide), and the arrow the game lays over a room picture on a choice that sends someone there. Drawn on the same square as the room pictures so the arrow lines up. The ones here, like the room pictures and the penlight, come from `artifacts/generated/buttons/` | 500 x 500 |
 
 Character ids: `chiikawa`, `hachiware`, `usagi`, `rakko`, `shisa`, `furuhonya`, `momonga`,
 `kurimanju`. Everyone who is not on shift that day can turn up as a patient.

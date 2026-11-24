@@ -19,7 +19,6 @@
   --paper: #fff9ee;
   --frame: #4a372e;
   --pink: #f9c9d6;
-  --pink-d: #ee8ea9;
   --sky: #bfe4f4;
   --mint: #c8ecd9;
   --mint-d: #7fcfa6;
@@ -674,7 +673,7 @@ i {
 }
 /* Why it cannot be chosen, under the word. */
 .opt small {
-  font-size: 26px;
+  font-size: 30px;
   color: var(--ink);
 }
 /* Already done: ticked in red pen. */
@@ -892,6 +891,26 @@ i {
 .pause-btn:active {
   translate: 0 5px;
   box-shadow: 0 2px 0 var(--shadow);
+}
+/* The smallest buttons take a finger over a wider area than they are drawn. On a phone the whole
+   stage is scaled to about a third, which leaves them only a few millimetres across. */
+.pause-btn::after,
+.door-note .choose button::after,
+.ticks button::after,
+.dx button::after {
+  content: '';
+  position: absolute;
+}
+.pause-btn::after {
+  inset: -32px;
+}
+.door-note .choose button::after {
+  inset: -24px 0;
+}
+/* On the chart they sit side by side, so each reaches only halfway to the next. */
+.ticks button::after,
+.dx button::after {
+  inset: -9px -10px;
 }
 /* Who you are right now: a cutout of them peeking up from the bottom-right corner. It sits under
    the paper notes and buttons, and never takes a tap meant for them. */
@@ -1348,7 +1367,7 @@ i {
 }
 .field small {
   display: block;
-  font-size: 26px;
+  font-size: 30px;
   line-height: 1.15;
   color: var(--print);
 }
@@ -1394,7 +1413,7 @@ i {
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1.1;
   color: var(--print);
 }
@@ -1815,7 +1834,7 @@ i {
   height: 62px;
 }
 .note .field small {
-  font-size: 28px;
+  font-size: 30px;
 }
 /* The tray on the counter where things change hands: a plain tray in the paper's own colour,
    an ink outline and one line for its rim. It is there whenever someone is at the counter. */
@@ -1882,7 +1901,7 @@ i {
   left: 0;
   right: 0;
   bottom: 27px;
-  font-size: 24px;
+  font-size: 30px;
   line-height: 1;
   text-align: center;
   white-space: nowrap;
@@ -2113,8 +2132,24 @@ i {
   top: 20px;
   z-index: 21;
   margin: 0;
-  font-size: 24px;
+  font-size: 30px;
   white-space: nowrap;
+  color: var(--ink);
+  opacity: 0.75;
+}
+/* Which build this is, in the other corner of the sky. Digits and Latin letters, so in the
+   hand that has them. */
+.version {
+  position: absolute;
+  right: calc(var(--edge-l) + 30px);
+  top: 20px;
+  z-index: 21;
+  margin: 0;
+  font-family: 'Yomogi', 'Zen Maru Gothic', sans-serif;
+  font-size: 30px;
+  letter-spacing: normal;
+  word-spacing: normal;
+  white-space: pre;
   color: var(--ink);
   opacity: 0.75;
 }
@@ -2149,7 +2184,7 @@ i {
   gap: 0;
   padding: 0;
   text-align: center;
-  font-size: 26px;
+  font-size: 30px;
   color: var(--print);
   border: 0;
 }
@@ -2338,7 +2373,7 @@ i {
   width: 300px;
   margin-top: 4px;
   padding-top: 6px;
-  font-size: 28px;
+  font-size: 30px;
   text-align: center;
   white-space: nowrap;
   color: var(--print);
@@ -2574,10 +2609,10 @@ i {
 }
 
 .stage[lang='en'] .results span {
-  font-size: 25px;
+  font-size: 30px;
 }
 .stage[lang='en'] .sticky {
-  font-size: 29px;
+  font-size: 30px;
 }
 .stage[lang='en'] .intro .start {
   font-size: 50px;
@@ -2857,7 +2892,7 @@ i {
   font-size: 42px;
 }
 .stage[lang='en'] .sign {
-  font-size: 28px;
+  font-size: 30px;
 }
 .stage[lang='en'] .chart-paper {
   grid-template-columns: 1fr 440px;
@@ -2891,7 +2926,7 @@ i {
 }
 .stage[lang='en'] .guide thead th,
 .stage[lang='en'] .guide .legend {
-  font-size: 28px;
+  font-size: 30px;
 }
 .stage[lang='en'] .tag.give {
   gap: 10px;
@@ -2902,10 +2937,10 @@ i {
   height: 70px;
 }
 .stage[lang='en'] .bag-name {
-  font-size: 22px;
+  font-size: 30px;
 }
 .stage[lang='en'] .shelf-tag {
-  font-size: 26px;
+  font-size: 30px;
   line-height: 1.35;
 }
 .stage[lang='en'] .note {

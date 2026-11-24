@@ -1,6 +1,7 @@
 import { render } from 'preact';
 import { App } from './App';
 import { preloadArt } from './stage/assets';
+import { watchForUpdates } from './update';
 import './styles.css';
 
 // Keep the page from behaving like a web page: no pinch zoom, no long-press menu.
@@ -21,5 +22,6 @@ document.addEventListener(
 );
 
 render(<App />, document.getElementById('app')!);
+watchForUpdates();
 // Once the page itself has loaded, fetch the rest of the art while the title screen is up.
 addEventListener('load', preloadArt, { once: true });

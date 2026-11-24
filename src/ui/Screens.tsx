@@ -3,6 +3,7 @@
 
 import { CHARACTERS, PROBLEMS, ROLE_JOB, ROLE_NAME, ROLE_PLACE } from '../game/data';
 import { day, endDay, gamePhase, nextDay, outcomes, paused, shift, startDay } from '../game/state';
+import { updateBetweenDays, versionLabel } from '../update';
 import type { CharId, Job, Outcome, Role, SceneId } from '../game/types';
 import { UI, fmt, lang, setLang, tr } from '../i18n';
 import { useEffect, useState } from 'preact/hooks';
@@ -86,11 +87,10 @@ const TITLE_GROUND = 1072;
  * The title: outside the clinic, under its signboard, with the staff waiting either side of the
  * doors. The start button is a signboard standing on the ground in front of the doors,
  * and the language is a small notice taped to the glass. The picture (`bg/title`) has the clinic's name on it; without one, the door
- * view stands in, with the name on a board of the game's own.
+ * view stands in, with the name written on a board of the game's own.
  */
 export function Title() {
   const front = asset('bg/title');
-  const logo = asset('ui/logo');
   return (
     <div class="screen title">
       {front ? (
@@ -99,7 +99,9 @@ export function Title() {
         <>
           <Bg id="door" />
           <div class="wash" />
-          <div class="signboard paper">{logo ? <img src={logo} alt={tr(UI.title)} draggable={false} /> : <h1>{tr(UI.title)}</h1>}</div>
+          <div class="signboard paper">
+            <h1>{tr(UI.title)}</h1>
+          </div>
         </>
       )}
       {/* A shadow on the ground under each of them, so they stand on it. */}
@@ -113,6 +115,8 @@ export function Title() {
         <LangChoice />
       </div>
       <p class="fan-note">{tr(UI.fanNote)}</p>
+      {/* Which build this is, in the opposite corner, to tell whether an update has arrived. */}
+      <p class="version">{versionLabel}</p>
       {view.value.rotated && <p class="turn-hint">{tr(UI.turnPhone)}</p>}
       <button
         class="tag big yes start"
@@ -396,7 +400,8 @@ export function Summary() {
           class="tag big yes"
           onClick={() => {
             sfx.good();
-            nextDay();
+            // If a newer build is waiting, the page reloads into it here, keeping the day.
+            if (!updateBetweenDays()) nextDay();
           }}
         >
           {tr(UI.nextDay)}

@@ -28,10 +28,9 @@ tools/throat.png               (the doctor's penlight)
 fixes/feverMed.png             (also coldMed, stomachMed, compress, toolbox)
 items/chiikawa.png             (one per character: what their personal trouble is about)
 signs/door.webp                (also waiting, doctor, counter: the room pictures on the tabs,
-                                tickets, chart and name cards)
-ui/ask.webp                    (asking: on the ticket, the note strip, the chart and the guide)
+                                choices, chart and name cards)
+ui/ask.webp                    (asking: on the choice, the note strip, the chart and the guide)
 ui/temp.webp                   (the thermometer, in the same places)
-ui/go.webp                     (the arrow laid over a room picture on a ticket that sends someone there)
+ui/go.webp                     (the arrow laid over a room picture on a choice that sends someone there)
 bg/title.webp                  (the title screen: the clinic from outside, name on its signboard)
-ui/logo.webp                   (the clinic's name on a board, only used if bg/title is missing)
 ```

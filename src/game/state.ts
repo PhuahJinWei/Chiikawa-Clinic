@@ -3,7 +3,7 @@
 
 import { batch, computed, signal } from '@preact/signals';
 import { sfx } from '../sfx';
-import { CHARACTERS, CHAR_IDS, PROBLEMS, PROBLEM_IDS, TEMP_RANGE, doorLines, shiftFor } from './data';
+import { CHAR_IDS, PROBLEMS, PROBLEM_IDS, TEMP_RANGE, doorLines, shiftFor } from './data';
 import type { CharId, ExamKind, Finding, FixId, Outcome, Patient, ProblemId, Result, SceneId, TimeOfDay, Where } from './types';
 
 const params = new URLSearchParams(location.search);
@@ -25,7 +25,17 @@ export type GamePhase = 'title' | 'intro' | 'play' | 'summary';
 export const gamePhase = signal<GamePhase>('title');
 export const paused = signal(false);
 export const scene = signal<SceneId>('waiting');
-export const day = signal(1);
+/** The day to start on: 1, unless the page reloaded itself between two days to pick up an update. */
+function firstDay(): number {
+  try {
+    const kept = Number(sessionStorage.getItem('resumeDay'));
+    sessionStorage.removeItem('resumeDay');
+    return kept >= 1 ? Math.floor(kept) : 1;
+  } catch {
+    return 1;
+  }
+}
+export const day = signal(firstDay());
 /** Real milliseconds played today, not counting pauses. Everything timed hangs off this. */
 export const playMs = signal(0);
 export const patients = signal<Patient[]>([]);

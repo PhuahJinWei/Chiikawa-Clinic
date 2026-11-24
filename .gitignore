@@ -1,0 +1,9 @@
+node_modules
+dist
+*.local
+.DS_Store
+
+# Source art, rejected variants, prompts and reference frames: kept on disk, not in the repo.
+artifacts/
+# Scratch files.
+tmp/

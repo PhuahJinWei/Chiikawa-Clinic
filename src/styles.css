@@ -1,0 +1,2916 @@
+/* All sizes below are stage pixels: the stage is 1920x1080 and is scaled as a whole (see Stage.tsx). */
+
+/* ちいかフォント by lavsic (https://booth.pm/ja/items/6401206), served as the original file,
+   unmodified. It has kana, digits and Latin letters; anything else falls back to Yomogi. */
+@font-face {
+  font-family: 'Chika';
+  src: url('./fonts/chika-Regular.ttf') format('truetype');
+  /* Its digits and full stop sit in very wide boxes ("3 8 .9"), so numbers are left to Yomogi,
+     which already supplies the colon and the degree sign beside them. */
+  unicode-range: U+0-2D, U+2F, U+3A-10FFFF;
+  font-display: swap;
+  /* Its letters are drawn small inside their box, so they are shown larger to match the sizes
+     the layout was set for. This scales the display only; the file is unchanged. */
+  size-adjust: 106%;
+}
+:root {
+  --ink: #5b4636;
+  --soft: #8c7765;
+  --paper: #fff9ee;
+  --frame: #4a372e;
+  --pink: #f9c9d6;
+  --pink-d: #ee8ea9;
+  --sky: #bfe4f4;
+  --mint: #c8ecd9;
+  --mint-d: #7fcfa6;
+  --yellow: #ffe9a8;
+  --red: #e0483c;
+  --shadow: rgba(91, 70, 54, 0.22);
+  --wobbly: 26px 34px 28px 36px / 34px 26px 36px 28px;
+  --bounce: cubic-bezier(0.3, 1.3, 0.6, 1);
+  --hand: 'Chika', 'Yomogi', 'Yusei Magic', 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic UI', 'Meiryo', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overflow: clip;
+  background: var(--frame);
+  overscroll-behavior: none;
+}
+body {
+  font-family: var(--hand);
+  color: var(--ink);
+  /* The letters sit far apart in their boxes; this draws words together a little. The gaps
+     between words are opened back up, since with no kanji they are what makes a line readable. */
+  letter-spacing: -0.13em;
+  word-spacing: 0.3em;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+button:focus {
+  outline: none;
+}
+button:disabled {
+  cursor: default;
+}
+h1,
+h2,
+h3,
+b,
+th {
+  font-weight: normal;
+}
+h1,
+h2,
+h3,
+p,
+dl,
+dd {
+  margin: 0;
+}
+img {
+  -webkit-user-drag: none;
+}
+i {
+  font-style: normal;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overflow: clip;
+}
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1920px;
+  height: 1080px;
+  margin: -540px 0 0 -960px;
+  transform-origin: 50% 50%;
+  font-size: 48px;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+
+/* ---------- paper pieces ---------- */
+
+.paper {
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: var(--wobbly);
+  box-shadow: 0 10px 0 var(--shadow);
+}
+.tag {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  padding: 0 18px;
+  text-align: center;
+  line-height: 1.1;
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: var(--wobbly);
+  box-shadow: 0 9px 0 var(--shadow);
+  transition:
+    translate 0.08s,
+    box-shadow 0.08s,
+    filter 0.15s;
+}
+.tag.yes {
+  background: var(--mint);
+}
+.tag.no {
+  background: var(--pink);
+}
+.tag:active:not(:disabled) {
+  translate: 0 6px;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+.tag:disabled {
+  filter: grayscale(0.6) opacity(0.55);
+}
+.tag small {
+  display: block;
+  font-size: 0.6em;
+  color: #9a6a5a;
+}
+.tag.big {
+  flex: none;
+  width: 520px;
+  height: 140px;
+  margin-top: auto;
+  font-size: 64px;
+  /* A stitched line just inside the edge. */
+  outline: 4px dashed rgba(255, 255, 255, 0.75);
+  outline-offset: -16px;
+}
+/* The one button that moves the day on (open, resume, next day): white paper in the ink
+   outline, with the stitched line in green, like the start sign on the title. */
+.tag.big.yes {
+  background: #fff;
+  outline-color: var(--mint-d);
+}
+/* ---------- a scene and its layers ---------- */
+
+.scene {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  animation: scene-in 0.24s ease-out;
+}
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    scale: 1.04;
+  }
+}
+/* Walking to another room, it comes in from the side you walked toward. */
+.scene.from-right {
+  animation: scene-from-right 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.scene.from-left {
+  animation: scene-from-left 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes scene-from-right {
+  from {
+    translate: 220px 0;
+    opacity: 0;
+  }
+}
+@keyframes scene-from-left {
+  from {
+    translate: -220px 0;
+    opacity: 0;
+  }
+}
+.world {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+/* Backgrounds are drawn 25% larger than the stage, so wide phones see more room, not bars. */
+.bg,
+.fg,
+.edge-fade {
+  position: absolute;
+  left: -240px;
+  top: -135px;
+  width: 2400px;
+  height: 1350px;
+  pointer-events: none;
+}
+.bg {
+  z-index: 0;
+  transition: opacity 4s ease-in-out;
+}
+/* A later time of day, waiting on top of the current one for the clock to reach it. */
+.bg.later {
+  opacity: 0;
+}
+.fg {
+  z-index: 50;
+}
+.edge-fade {
+  z-index: 55;
+  background: linear-gradient(90deg, var(--frame), transparent 4%, transparent 96%, var(--frame));
+}
+.vignette {
+  position: absolute;
+  left: var(--vis-l);
+  top: var(--vis-t);
+  width: var(--vis-w);
+  height: var(--vis-h);
+  z-index: 60;
+  pointer-events: none;
+  background: radial-gradient(ellipse 74% 84% at 50% 50%, transparent 56%, rgba(58, 42, 36, 0.3) 100%);
+}
+/* Film grain. It only ever moves by being shifted, so it costs nothing to animate. */
+.grain {
+  position: absolute;
+  inset: -800px -1300px;
+  z-index: 79;
+  pointer-events: none;
+  background-size: 320px 320px;
+  image-rendering: pixelated;
+  opacity: 0.22;
+  animation: grain 0.5s steps(1) infinite;
+}
+@keyframes grain {
+  0% {
+    translate: 0 0;
+  }
+  25% {
+    translate: -96px 64px;
+  }
+  50% {
+    translate: 64px -128px;
+  }
+  75% {
+    translate: -32px -64px;
+  }
+}
+.defs {
+  position: absolute;
+}
+/* Full-screen fills reach well past the stage so they also cover the bleed on wide screens. */
+.dimmer {
+  position: absolute;
+  inset: -700px -1100px;
+  z-index: 30;
+  background: rgba(74, 55, 46, 0.5);
+  animation: fade-in 0.2s;
+}
+.overlay,
+.screen {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+}
+.overlay::before,
+.screen::before {
+  content: '';
+  position: absolute;
+  inset: -700px -1100px;
+  z-index: -1;
+}
+.overlay {
+  z-index: 90;
+  animation: fade-in 0.18s;
+}
+.overlay::before {
+  background: rgba(74, 55, 46, 0.55);
+}
+
+/* ---------- cutouts ---------- */
+
+.cutout {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 400px;
+  height: 460px;
+  transform-origin: 50% 100%;
+  transition:
+    translate 0.4s var(--bounce),
+    scale 0.4s var(--bounce),
+    opacity 0.35s;
+  animation: hop-in 0.45s cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+/* `transform` is free here because position and size use the separate translate/scale properties. */
+@keyframes hop-in {
+  from {
+    transform: translateY(90px);
+    opacity: 0;
+  }
+}
+.cutout.tappable {
+  cursor: pointer;
+}
+.cutout.gone {
+  opacity: 0;
+}
+/* Already in the room when you walk in: simply there. */
+.cutout.in-none {
+  animation: none;
+}
+/* Arriving while you watch: in from the left, the way in, like a cutout pushed on from the side. */
+.cutout.in-left {
+  animation: slide-in 0.45s cubic-bezier(0.3, 1.2, 0.6, 1);
+}
+@keyframes slide-in {
+  from {
+    transform: translateX(-420px) rotate(-4deg);
+    opacity: 0;
+  }
+}
+/* Leaving: off to the right for the next room, back to the left for home. */
+.cutout.out-right {
+  animation: slide-out-right 0.45s cubic-bezier(0.5, 0, 0.8, 0.6) forwards;
+}
+.cutout.out-left {
+  animation: slide-out-left 0.45s cubic-bezier(0.5, 0, 0.8, 0.6) forwards;
+}
+@keyframes slide-out-right {
+  to {
+    transform: translateX(520px) rotate(5deg);
+    opacity: 0;
+  }
+}
+@keyframes slide-out-left {
+  to {
+    transform: translateX(-520px) rotate(-5deg);
+    opacity: 0;
+  }
+}
+.wob {
+  position: absolute;
+  inset: 0;
+}
+.wob > img,
+.wob > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.wob > img {
+  object-fit: contain;
+  object-position: 50% 100%;
+  /* Drawn characters leave headroom for tall ears and a little space under the feet, so they are
+     enlarged about the bottom edge to stand as big as the box they are placed by. */
+  transform-origin: 50% 95.7%;
+  scale: 1.2;
+  filter: drop-shadow(0 10px 0 var(--shadow));
+}
+.fx {
+  pointer-events: none;
+}
+.fx-float {
+  animation: fx-float 1.2s steps(3) infinite;
+}
+@keyframes fx-float {
+  0% {
+    transform: translateY(6px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.fx-pop {
+  animation: fx-pop 0.9s steps(1) infinite;
+}
+@keyframes fx-pop {
+  0% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0;
+  }
+}
+/* A slip of paper over a waiting patient's head, for the thermometer: plain paper, an ink
+   outline, the thermometer's picture, and either the dots of it counting or the reading. */
+.slip {
+  position: absolute;
+  left: 50%;
+  top: -80px;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 22px 4px 14px;
+  font-size: 44px;
+  line-height: 1.2;
+  white-space: nowrap;
+  rotate: -2deg;
+  background: var(--paper);
+  border: 5px solid var(--ink);
+  border-radius: 10px 14px 12px 16px;
+  box-shadow: 0 6px 0 var(--shadow);
+  animation: pop-in 0.3s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+.slip > svg,
+.slip > img {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+/* Three dots, inked in one by one while the thermometer counts. */
+.dots {
+  display: flex;
+  gap: 12px;
+  padding: 0 4px;
+}
+.dots i {
+  width: 20px;
+  height: 20px;
+  border: 4px solid var(--ink);
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+.dots i.on {
+  background: var(--ink);
+}
+
+/* ---------- a character talking: speech bubble, what you notice, your choices ---------- */
+
+/* Kept left of the bottom-right corner, where the staff cutout stands. The bubble is only as big
+   as what is said, and grows upward from just above the note strip, so its tail stays beside
+   the speaker's face whether it holds one cry or three lines. */
+.talk {
+  position: absolute;
+  left: 830px;
+  bottom: 546px;
+  width: max-content;
+  /* Never narrower than the name tab on its top edge. */
+  min-width: 520px;
+  max-width: 760px;
+  z-index: 70;
+  padding: 74px 50px 30px;
+  rotate: -0.6deg;
+  font-size: 54px;
+  line-height: 1.42;
+  word-break: keep-all;
+  background: #fff;
+  border: 7px solid var(--ink);
+  border-radius: 70px 84px 76px 88px / 84px 70px 88px 76px;
+  box-shadow: 0 11px 0 var(--shadow);
+  transform-origin: 0 80%;
+  animation: bubble-in 0.3s cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+/* A sound, not a sentence: written bigger, the way cries are lettered in the comic. */
+.talk.cry {
+  font-size: 68px;
+  line-height: 1.3;
+}
+/* And yelled: bigger again, heavier, and a little askew. */
+.talk.shout {
+  font-size: 88px;
+  line-height: 1.2;
+  -webkit-text-stroke: 0.03em currentColor;
+}
+.talk.shout .say {
+  rotate: -2deg;
+}
+/* A cry is never broken by the bubble, only where it is written on two lines, so the bubble
+   closes up around it. */
+.talk.cry .say,
+.talk.shout .say {
+  white-space: pre;
+}
+/* The bubble's tail, toward the speaker on the left. Its white inner half hides the bubble's edge. */
+.talk::before {
+  content: '';
+  position: absolute;
+  left: -37px;
+  bottom: 56px;
+  width: 60px;
+  height: 60px;
+  rotate: 45deg;
+  background: #fff;
+  border-left: 7px solid var(--ink);
+  border-bottom: 7px solid var(--ink);
+  border-bottom-left-radius: 12px;
+}
+@keyframes bubble-in {
+  from {
+    scale: 0.7;
+    opacity: 0;
+  }
+}
+/* Who is speaking: their face and name on a tab at the bubble's top edge. */
+.who {
+  position: absolute;
+  left: 44px;
+  top: -52px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 34px 6px 10px;
+  font-size: 42px;
+  line-height: 1.3;
+  white-space: nowrap;
+  rotate: -2deg;
+  /* Plain paper, like everything else that is written on. */
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: 60px;
+  box-shadow: 0 6px 0 var(--shadow);
+}
+.who .face {
+  width: 70px;
+  height: 70px;
+  border-width: 0;
+  box-shadow: 0 0 0 5px var(--ink);
+}
+.say {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+.ghost {
+  opacity: 0;
+}
+/* What you notice or have found out, on a strip of note paper under the bubble. */
+.seen {
+  position: absolute;
+  left: 850px;
+  top: 560px;
+  width: 730px;
+  min-height: 92px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 4px 24px;
+  font-size: 36px;
+  line-height: 1.15;
+  /* Always written out in full: a long one takes a second line. */
+  word-break: keep-all;
+  rotate: 0.8deg;
+  background: var(--yellow);
+  border: 5px solid var(--ink);
+  border-radius: 10px 16px 12px 18px;
+  box-shadow: 0 7px 0 var(--shadow);
+  animation: pop-in 0.25s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+.note-icon,
+.seen > img {
+  flex: none;
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+/* The choices: plain paper buttons in a hand-drawn outline, a small picture and then the word.
+   Nothing else on them. Each sits very slightly askew, as if put down by hand. */
+.opt {
+  position: absolute;
+  z-index: 70;
+  width: 370px;
+  height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 20px;
+  font-size: 44px;
+  white-space: nowrap;
+}
+.tag.opt {
+  background: var(--paper);
+}
+.opt.o0,
+.opt.o3 {
+  rotate: -0.8deg;
+}
+.opt.o1,
+.opt.o2 {
+  rotate: 0.8deg;
+}
+.pic {
+  flex: none;
+  display: grid;
+}
+.pic > svg,
+.pic > img,
+.goto {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+}
+/* "Go to": the room's picture, with the arrow laid over its lower corner. */
+.goto {
+  position: relative;
+  display: block;
+}
+.goto > svg,
+.goto > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.goto > .goto-arrow {
+  position: absolute;
+  right: -20%;
+  bottom: -16%;
+  width: 72%;
+  height: 72%;
+}
+.opt > span {
+  display: grid;
+  justify-items: center;
+}
+/* Cannot be chosen just now, or already done: faded, but still readable. */
+.tag.opt:disabled {
+  filter: none;
+  background: #f1eadf;
+}
+.opt:disabled .pic {
+  filter: grayscale(1) opacity(0.55);
+}
+.opt:disabled > span {
+  color: #a08c79;
+}
+/* Why it cannot be chosen, under the word. */
+.opt small {
+  font-size: 26px;
+  color: var(--ink);
+}
+/* Already done: ticked in red pen. */
+.ticked {
+  flex: none;
+  width: 46px;
+  height: 42px;
+  margin-left: -4px;
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  rotate: -4deg;
+  animation: pop-in 0.2s;
+}
+.opt.o0 {
+  left: 830px;
+  top: 682px;
+}
+.opt.o1 {
+  left: 1220px;
+  top: 682px;
+}
+.opt.o2 {
+  left: 830px;
+  top: 810px;
+}
+.opt.o3 {
+  left: 1220px;
+  top: 810px;
+}
+
+/* ---------- door ---------- */
+
+/* Nobody at the door: a small slip of paper, low in the view. */
+.nobody {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 800px;
+  z-index: 70;
+  width: max-content;
+  margin: 0 auto;
+  padding: 8px 40px 10px;
+  font-size: 48px;
+  line-height: 1.2;
+  rotate: -1.5deg;
+  background: var(--paper);
+  border: 5px solid var(--ink);
+  border-radius: 10px 14px 12px 16px;
+  box-shadow: 0 7px 0 var(--shadow);
+  animation: pop-in 0.3s 0.4s cubic-bezier(0.3, 1.5, 0.6, 1) both;
+}
+
+.door .opt.o0,
+.door .opt.o1 {
+  top: 700px;
+  height: 150px;
+  gap: 20px;
+  font-size: 48px;
+}
+.door .opt .goto {
+  width: 86px;
+  height: 86px;
+}
+/* Everything outside goes through the lens: the whole background canvas, bleed included. */
+.lens {
+  position: absolute;
+  left: -240px;
+  top: -135px;
+  width: 2400px;
+  height: 1350px;
+  overflow: hidden;
+}
+.lens > .world {
+  inset: 135px 240px;
+}
+/* The lens squeezes the edges, so the middle is enlarged to keep the visitor the same size. */
+.lens.on > .world {
+  scale: 1.13;
+}
+/* The dark rim of the door viewer, and a soft shine on its glass. */
+.peep {
+  --cx: calc(960px - var(--vis-l));
+  --cy: calc(540px - var(--vis-t));
+  position: absolute;
+  left: var(--vis-l);
+  top: var(--vis-t);
+  width: var(--vis-w);
+  height: var(--vis-h);
+  z-index: 60;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 560px 300px at calc(var(--cx) - 380px) calc(var(--cy) - 350px), rgba(255, 255, 255, 0.2), transparent 70%),
+    radial-gradient(circle 1090px at var(--cx) var(--cy), transparent 68%, rgba(43, 30, 26, 0.55) 81%, #2b1e1a 93%);
+}
+
+/* ---------- HUD ---------- */
+
+.hud {
+  position: absolute;
+  left: var(--edge-l);
+  top: 18px;
+  z-index: 80;
+}
+/* The wall clock. Tapping it pauses too, like the button beside it. */
+.clock {
+  position: absolute;
+  left: 22px;
+  top: 0;
+  width: 310px;
+  height: 132px;
+  white-space: nowrap;
+}
+.clock:active {
+  translate: 0 4px;
+}
+/* Named dial, not face: .face is a character's round portrait. */
+.dial {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 132px;
+  height: 132px;
+  z-index: 1;
+  /* Four ticks, at twelve, three, six and nine. */
+  background:
+    linear-gradient(var(--ink) 0 0) 50% 5px / 5px 13px no-repeat,
+    linear-gradient(var(--ink) 0 0) 50% calc(100% - 5px) / 5px 13px no-repeat,
+    linear-gradient(var(--ink) 0 0) 5px 50% / 13px 5px no-repeat,
+    linear-gradient(var(--ink) 0 0) calc(100% - 5px) 50% / 13px 5px no-repeat,
+    #fff;
+  border: 8px solid var(--ink);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 5px var(--pink),
+    0 8px 0 var(--shadow);
+}
+/* The pin the hands turn on. */
+.dial::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px;
+  background: var(--red);
+  border: 4px solid var(--ink);
+  border-radius: 50%;
+}
+.hand {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  width: 8px;
+  margin-left: -4px;
+  transform-origin: 50% 100%;
+  background: var(--ink);
+  border-radius: 4px;
+}
+.hand.hour {
+  height: 30px;
+}
+.hand.min {
+  width: 6px;
+  height: 44px;
+  margin-left: -3px;
+}
+.sky-icon {
+  position: absolute;
+  left: 92px;
+  top: -10px;
+  width: 54px;
+  height: 54px;
+  z-index: 2;
+}
+/* The time in figures, on a tag tucked behind the clock. */
+.time {
+  position: absolute;
+  left: 106px;
+  top: 42px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  padding: 0 26px 0 40px;
+  font-size: 46px;
+  rotate: -2deg;
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: 10px 36px 36px 10px;
+  box-shadow: 0 7px 0 var(--shadow);
+}
+/* The pause button: a round of plain paper in the top-right corner, with two bars drawn on it. */
+.pause-btn {
+  position: absolute;
+  right: calc(var(--edge-l) + 22px);
+  top: 20px;
+  width: 80px;
+  height: 80px;
+  z-index: 80;
+  rotate: 3deg;
+  background:
+    linear-gradient(var(--ink) 0 0) calc(50% - 10px) 50% / 10px 32px no-repeat,
+    linear-gradient(var(--ink) 0 0) calc(50% + 10px) 50% / 10px 32px no-repeat,
+    var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: 48% 52% 50% 50% / 52% 48% 52% 48%;
+  box-shadow: 0 7px 0 var(--shadow);
+  transition:
+    translate 0.08s,
+    box-shadow 0.08s;
+}
+.pause-btn:active {
+  translate: 0 5px;
+  box-shadow: 0 2px 0 var(--shadow);
+}
+/* Who you are right now: a cutout of them peeking up from the bottom-right corner. It sits under
+   the paper notes and buttons, and never takes a tap meant for them. */
+.me {
+  position: absolute;
+  right: calc(var(--edge-l) - 34px);
+  bottom: -150px;
+  z-index: 69;
+  width: 380px;
+  height: 437px;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: peek-in 0.4s cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+@keyframes peek-in {
+  from {
+    translate: 0 160px;
+    opacity: 0;
+  }
+}
+.me > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+  rotate: -4deg;
+  filter: drop-shadow(0 8px 0 var(--shadow));
+}
+/* Without a drawing, a round badge with their initial stands in. */
+.me.badge {
+  right: calc(var(--edge-l) + 22px);
+  bottom: 18px;
+  width: 108px;
+  height: 108px;
+  display: grid;
+  place-items: center;
+  background: var(--pink);
+  border: 6px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 8px 0 var(--shadow);
+}
+.me .face {
+  width: 76px;
+  height: 76px;
+  font-size: 42px;
+}
+/* A drawn portrait is a whole head with nothing behind it, so it is fitted inside the circle. */
+.face img {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+}
+/* A drawn face: a white sticker edge instead of the tinted placeholder. */
+.face.pic {
+  overflow: hidden;
+  background: #fff;
+  border-color: #fff;
+}
+.face {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  line-height: 1;
+  border: 6px solid;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--ink);
+}
+/* The four rooms, as index tabs sticking out from the left edge of the screen. */
+.nav {
+  position: absolute;
+  left: 0;
+  top: 162px;
+  display: grid;
+  gap: 12px;
+}
+/* A room's tab: plain paper sticking out from the left edge, its picture and its name. */
+.sign {
+  position: relative;
+  width: 184px;
+  height: 118px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  font-size: 33px;
+  line-height: 1.1;
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-left-width: 0;
+  border-radius: 0 34px 30px 0 / 0 30px 34px 0;
+  box-shadow: 0 8px 0 var(--shadow);
+  transition: width 0.18s var(--bounce);
+}
+.sign svg,
+.sign img {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+}
+.sign span {
+  position: relative;
+  padding: 0 14px;
+}
+/* The room you are in: its tab is pulled out a little, and its name ringed in red pen. */
+.sign.on {
+  width: 208px;
+}
+.sign .ring {
+  inset: -3px 0 -5px;
+  border-width: 5px;
+}
+/* Someone is at the door: its tab wags. */
+.sign.alert {
+  transform-origin: 0 50%;
+  animation: wiggle 0.5s steps(2) infinite;
+}
+@keyframes wiggle {
+  0% {
+    rotate: -4deg;
+  }
+  50% {
+    rotate: 4deg;
+  }
+}
+/* How many are in a room, or a "!" for someone at the door: written in a plain circle at the
+   tab's corner. */
+.dot {
+  position: absolute;
+  right: -18px;
+  top: -14px;
+  min-width: 52px;
+  height: 52px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  font-weight: normal;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--paper);
+  border: 5px solid var(--ink);
+  border-radius: 26px;
+  animation: pop-in 0.25s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+
+/* ---------- doctor room ---------- */
+
+/* The doctor's two buttons, one over the other, low on the right beside the patient. */
+.opt.d0,
+.opt.d1 {
+  left: 1390px;
+}
+.opt.d0 {
+  top: 548px;
+  rotate: -0.8deg;
+}
+.opt.d1 {
+  top: 680px;
+  rotate: 0.8deg;
+}
+/* Looking down the throat: the room dims, and a round view opens over the patient's face. The
+   mouth inside is far bigger than the view, and is dragged about to look around it. It sits in
+   the room under the doctor's two buttons, which stay in reach. */
+.scope-dim {
+  position: absolute;
+  inset: -700px -1100px;
+  z-index: 60;
+  background: rgba(74, 55, 46, 0.55);
+  animation: fade-in 0.2s;
+}
+/* The view: one ink outline and a plain paper rim. */
+.scope {
+  position: absolute;
+  left: 645px;
+  top: 200px;
+  width: 620px;
+  height: 620px;
+  z-index: 62;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background: #2a1a14;
+  border: 12px solid var(--ink);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 10px var(--paper),
+    0 12px 0 10px var(--shadow);
+  animation: pop-in 0.25s cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+.scope:active {
+  cursor: grabbing;
+}
+/* The light falls off a little toward the rim. */
+.scope::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 58%, rgba(42, 26, 20, 0.4) 100%);
+}
+.scope-pan {
+  position: absolute;
+  left: -372px;
+  top: -372px;
+  width: 1364px;
+  height: 1364px;
+  pointer-events: none;
+}
+.scope-pan svg,
+.scope-pan img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* The camera. Opening the chart turns it toward the side desk: the room slides left, keeping the
+   patient in view, and the desk comes in from the right. */
+.cam {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  isolation: isolate;
+  transition: translate 0.5s cubic-bezier(0.45, 0, 0.2, 1);
+}
+.cam.side {
+  translate: -440px 0;
+}
+/* Closed, the desk's edge and the chart on it peek in from the right edge of the screen. */
+.sidedesk {
+  position: absolute;
+  left: 800px;
+  top: -135px;
+  width: 1700px;
+  height: 1350px;
+  z-index: 64;
+  cursor: pointer;
+  translate: calc(1000px - var(--edge-l)) 0;
+  box-shadow: -16px 0 0 var(--shadow);
+  transition: translate 0.5s cubic-bezier(0.45, 0, 0.2, 1);
+}
+.sidedesk.in {
+  cursor: default;
+  translate: 0 0;
+}
+/* Until it is open, a tap on the chart opens it instead of circling something. */
+.sidedesk:not(.in) .chart,
+.sidedesk:not(.in) .tray {
+  pointer-events: none;
+}
+/* Sits under the desk and over the room while the chart is open. */
+.catcher {
+  position: absolute;
+  inset: -700px -1100px;
+  z-index: 62;
+}
+.sidedesk > svg,
+.sidedesk > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The clipboard on the side desk: a wooden board, a metal clip, and the chart sheet under it. */
+.chart {
+  position: absolute;
+  left: 20px;
+  top: 159px;
+  width: 1060px;
+  height: 900px;
+  padding: 58px 26px 26px;
+  background: #e2ad72;
+  border: 6px solid var(--ink);
+  border-radius: 30px;
+  box-shadow: 0 10px 0 var(--shadow);
+}
+/* The clip. */
+.chart::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -34px;
+  width: 300px;
+  height: 104px;
+  margin-left: -150px;
+  z-index: 2;
+  background:
+    linear-gradient(#8c96a3 0 0) 50% 100% / 100% 34px no-repeat,
+    #c9d2de;
+  border: 6px solid var(--ink);
+  border-radius: 46px 46px 16px 16px;
+  box-shadow: 0 6px 0 var(--shadow);
+}
+/* With a drawing of the board (`fg/doctor-clipboard`), the game's own board, clip and sheet step
+   aside: the drawing has its own blank paper, and the game only writes on it. The drawing is the
+   board's size plus 40px above it for the clip; its paper is at x 42 to 1017, y 90 to 892. */
+.chart.drawn {
+  padding: 50px 43px 48px 42px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.chart.drawn::before {
+  display: none;
+}
+.chart.drawn .chart-paper {
+  height: 802px;
+  rotate: 0deg;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.chart-board {
+  position: absolute;
+  left: 0;
+  top: -40px;
+  width: 1060px;
+  height: 940px;
+  pointer-events: none;
+}
+.chart-paper {
+  position: relative;
+  height: 816px;
+  display: grid;
+  grid-template-columns: 1fr 366px;
+  grid-template-rows: auto 1fr;
+  gap: 18px 26px;
+  padding: 34px 30px 20px;
+  text-align: left;
+  font-size: 36px;
+  line-height: 1.25;
+  rotate: 0.3deg;
+  background: var(--paper);
+  border: 5px solid var(--ink);
+  border-radius: 10px 14px 12px 16px;
+  box-shadow: 0 5px 0 var(--shadow);
+}
+/* The top of the form: the patient's picture, their name, and the place for the seal. */
+.chart header,
+.note header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding-bottom: 16px;
+  border-bottom: 5px dashed #d9c7b2;
+}
+.photo {
+  flex: none;
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  rotate: -4deg;
+  background: #fff;
+  border: 5px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: 0 5px 0 var(--shadow);
+}
+.photo .face {
+  width: 100%;
+  height: 100%;
+  font-size: 54px;
+  border-width: 0;
+  border-radius: 4px;
+  box-shadow: none;
+}
+/* In the photo the portrait fills the frame; its own empty margin is cropped away. */
+.photo .face img {
+  width: 112%;
+  height: 112%;
+  max-width: none;
+}
+.chart-title {
+  flex: 1;
+  display: grid;
+  line-height: 1.15;
+}
+.chart-title small {
+  font-size: 32px;
+  color: var(--soft);
+}
+.chart-title b {
+  font-size: 62px;
+  white-space: nowrap;
+}
+.seal-spot {
+  flex: none;
+  width: 150px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+  border: 5px dashed #d9c7b2;
+  border-radius: 50%;
+}
+.seal-spot .seal {
+  width: 164px;
+  height: 164px;
+  font-size: 36px;
+}
+/* The form itself is printed in one dull ink: its headings, captions, rules and little pictures.
+   What was written on it is in darker ink, and the only colour is the doctor's red pen. */
+.chart-paper,
+.note {
+  --form: #c9b8a4;
+  --print: #94806d;
+}
+/* Section headings: printed, with a rule under them. */
+.chart h3,
+.note h3 {
+  margin: 0 0 14px;
+  padding: 0 4px 2px;
+  font-size: 34px;
+  font-weight: normal;
+  line-height: 1.2;
+  color: var(--print);
+  border-bottom: 3px solid var(--form);
+}
+.chart .part.verdict {
+  margin-top: 26px;
+}
+/* One entry of the form: a small printed picture, a printed caption, and under it the ruled
+   lines that were written on. */
+.field {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.field > div:last-child {
+  flex: 1;
+  min-width: 0;
+}
+/* The pictures are printed too, so they take the form's ink and lose their own colours. */
+.field-icon,
+.exam-name svg,
+.exam-name img {
+  filter: grayscale(1) sepia(0.45) opacity(0.6);
+}
+.field-icon {
+  flex: none;
+  width: 54px;
+  height: 54px;
+  margin-top: 6px;
+}
+.field-icon svg,
+.field-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.field small {
+  display: block;
+  font-size: 26px;
+  line-height: 1.15;
+  color: var(--print);
+}
+/* A rule under every line of the writing, however many lines it runs to. */
+.field p {
+  margin: 0;
+  line-height: 1.3;
+  background: linear-gradient(transparent calc(100% - 3px), var(--form) 0) 0 0 / 100% 1.3em;
+}
+/* Written by hand: the words do not sit quite straight. */
+.word {
+  display: inline-block;
+  white-space: nowrap;
+}
+.field .word:nth-child(odd) {
+  rotate: -1deg;
+}
+.field .word:nth-child(even) {
+  rotate: 0.8deg;
+  translate: 0 1px;
+}
+/* Nothing written here: the nurse did not ask, or did not take it. */
+.field.empty p {
+  color: var(--form);
+}
+/* How high the temperature is, in a word after the number. A high one is underlined. */
+.level {
+  margin-left: 14px;
+  font-size: 0.86em;
+  font-style: normal;
+}
+.level.normal {
+  color: var(--print);
+}
+.level.high {
+  text-decoration: underline;
+  text-decoration-thickness: 4px;
+  text-underline-offset: 7px;
+}
+/* What the doctor looked at, then the two things it can have looked like, to circle by hand. */
+.exam-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--print);
+}
+.exam-name svg,
+.exam-name img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+.ticks {
+  display: flex;
+  gap: 14px;
+}
+/* Each choice is printed inside a faint outline, the way forms show where to circle. */
+.ticks button {
+  position: relative;
+  flex: 1;
+  height: 80px;
+  font-size: 38px;
+  white-space: nowrap;
+  border: 3px dashed var(--form);
+  border-radius: 40px;
+}
+/* On the chart the troubles go two to a row, and the last, longest one takes a row of its own. */
+.chart .dx > :last-child {
+  grid-column: 1 / -1;
+}
+/* Under the chart, within reach: the penlight in its tray, and the guide as a little book. */
+.tray {
+  position: absolute;
+  left: 20px;
+  top: 1070px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+/* The throat button again, in reach while the chart is open: the same plain paper. */
+.tray button {
+  width: 262px;
+  height: 122px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 42px;
+  line-height: 1.1;
+  white-space: nowrap;
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: var(--wobbly);
+  box-shadow: 0 8px 0 var(--shadow);
+}
+.tray button:active:not(:disabled) {
+  translate: 0 5px;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+.tray button:disabled {
+  filter: grayscale(0.6) opacity(0.6);
+}
+.tray svg,
+.tray img {
+  flex: none;
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+}
+.tray .ticked {
+  width: 46px;
+  height: 42px;
+}
+/* The guide's button: the same plain paper as the one beside it, with a little notebook drawn
+   on it. */
+.tray .book {
+  width: 360px;
+  font-size: 38px;
+  rotate: 1deg;
+}
+.tray .book svg {
+  width: 58px;
+  height: 58px;
+}
+.dx {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+.dx button,
+.dx span {
+  position: relative;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 36px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.dx button {
+  border: 3px dashed var(--form);
+  border-radius: 38px;
+}
+/* What the chart has narrowed it down to, when it cannot decide alone: ringed in pencil. */
+.dx button.maybe {
+  rotate: -1.5deg;
+  border: 4px dashed var(--ink);
+  border-radius: 50%;
+}
+.narrowed {
+  margin-left: 12px;
+  font-size: 30px;
+  white-space: nowrap;
+  color: var(--print);
+  animation: pop-in 0.25s;
+}
+/* A hand-drawn circle around the chosen option. */
+.ring {
+  position: absolute;
+  inset: -6px -4px;
+  pointer-events: none;
+  rotate: -3deg;
+  border: 8px solid var(--red);
+  border-radius: 50%;
+  animation: pop-in 0.2s;
+}
+.seal {
+  width: 180px;
+  height: 180px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--red);
+  rotate: -12deg;
+  border: 10px solid var(--red);
+  border-radius: 50%;
+  animation: seal-in 0.28s cubic-bezier(0.3, 1.8, 0.6, 1);
+}
+@keyframes seal-in {
+  from {
+    scale: 2.4;
+    opacity: 0;
+  }
+}
+
+/* The guide: a page of the doctor's blue notebook, held up over the desk. Punched down its left
+   edge, with the cover showing behind it. Written by hand in one ink; what gives a trouble away
+   is in the doctor's red pen. */
+.guide {
+  --form: #c9b8a4;
+  --print: #94806d;
+  position: absolute;
+  left: 290px;
+  top: 96px;
+  width: 1420px;
+  padding: 44px 64px 34px 124px;
+  rotate: -0.6deg;
+  font-size: 42px;
+  line-height: 1.2;
+  text-align: center;
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: 8px 22px 22px 8px;
+  /* The blue cover, showing past the page's right and bottom edges, and its shadow. */
+  box-shadow:
+    20px 22px 0 0 var(--sky),
+    20px 22px 0 6px var(--ink),
+    20px 36px 0 6px var(--shadow);
+  animation: pop-in 0.25s cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+/* The holes down the page's edge. */
+.guide::after {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: 34px;
+  bottom: 34px;
+  width: 36px;
+  background: radial-gradient(circle, var(--ink) 0 10px, transparent 11px) 50% 0 / 36px 84px repeat-y;
+  opacity: 0.55;
+}
+/* Its title, on a label like the one on the cover. */
+.guide h2 {
+  display: inline-block;
+  margin: 0 0 14px;
+  padding: 2px 34px 4px;
+  font-size: 48px;
+  font-weight: normal;
+  rotate: -1.2deg;
+  background: #fff;
+  border: 4px solid var(--ink);
+  border-radius: 8px 10px 8px 12px;
+  box-shadow: 0 5px 0 var(--shadow);
+}
+.guide table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.guide th,
+.guide td {
+  height: 92px;
+  padding: 0 16px;
+  font-weight: normal;
+  text-align: center;
+  white-space: nowrap;
+  border-bottom: 3px solid var(--form);
+}
+/* The column heads are printed: a little picture and a word, in the form's ink. */
+.guide thead th {
+  height: 70px;
+  font-size: 32px;
+  color: var(--print);
+  border-bottom-width: 5px;
+}
+.guide thead svg,
+.guide thead img {
+  width: 44px;
+  height: 44px;
+  margin-right: 10px;
+  vertical-align: -10px;
+  object-fit: contain;
+  filter: grayscale(1) sepia(0.45) opacity(0.6);
+}
+.guide tbody th {
+  font-size: 46px;
+  text-align: left;
+}
+.guide tbody tr:last-child th,
+.guide tbody tr:last-child td {
+  border-bottom: 0;
+}
+/* Nothing to see there: left faint. What gives the trouble away: in red, underlined. */
+.guide td.miss {
+  color: var(--form);
+}
+.guide td.hit {
+  color: var(--red);
+  text-decoration: underline;
+  text-decoration-thickness: 4px;
+  text-underline-offset: 8px;
+}
+.guide td.says {
+  text-align: left;
+  font-size: 38px;
+}
+.guide .legend {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  font-size: 30px;
+  color: var(--print);
+  border-top: 5px double var(--form);
+}
+
+/* ---------- counter ---------- */
+
+/* The things in the cabinet. Each button is one cubby: the fix stands on its floor, and its name
+   hangs on a card from the board above. Sizes follow CABINET in art.tsx. */
+.med {
+  position: absolute;
+  z-index: 70;
+  width: 299px;
+  height: 210px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  justify-items: center;
+  white-space: nowrap;
+  border-radius: 10px;
+}
+/* The fix: its drawing's own bottom edge is set on the shelf (see FIX_FOOT in Counter.tsx). */
+.med-pic {
+  align-self: end;
+  display: block;
+  width: 150px;
+  height: 150px;
+  transform-origin: 50% 100%;
+  transition:
+    translate 0.15s var(--bounce),
+    rotate 0.15s var(--bounce);
+}
+.med-pic svg,
+.med-pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.med:active:not(:disabled) .med-pic {
+  translate: 0 -6px;
+}
+/* The label: the fix's name on a card, hung over the edge of the board above. */
+.shelf-tag {
+  position: relative;
+  z-index: 1;
+  margin-top: -8px;
+  min-width: 160px;
+  padding: 1px 14px 2px;
+  font-size: 32px;
+  line-height: 1.08;
+  text-align: center;
+  rotate: -1.2deg;
+  background: #fff;
+  border: 4px solid var(--ink);
+  border-radius: 8px 10px 8px 12px;
+  box-shadow: 0 4px 0 var(--shadow);
+  transition: rotate 0.15s var(--bounce);
+}
+.med:nth-of-type(even) .shelf-tag {
+  rotate: 1deg;
+}
+/* The one in hand is lifted off the shelf, with a ring of light on the back of its cubby. */
+.med.picked {
+  background: radial-gradient(circle at 50% 128px, var(--yellow) 0 74px, transparent 78px);
+}
+.med.picked .med-pic {
+  translate: 0 -12px;
+  rotate: -4deg;
+}
+.med.picked .shelf-tag {
+  rotate: 0deg;
+  background: var(--yellow);
+}
+/* Under the held-up paper and over the rest of the room: a tap here puts the paper down. */
+.note-catcher {
+  position: absolute;
+  inset: -700px -1100px;
+  z-index: 73;
+}
+/* The paper that came with the patient. Held up in front of the cabinet; tap to lay it on the counter. */
+.note {
+  position: absolute;
+  left: 730px;
+  top: 26px;
+  width: 890px;
+  height: 1010px;
+  z-index: 74;
+  padding: 0 44px 30px;
+  font-size: 44px;
+  line-height: 1.25;
+  rotate: 1.2deg;
+  cursor: pointer;
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: 12px 16px 14px 18px;
+  box-shadow: 0 10px 0 var(--shadow);
+  transition:
+    translate 0.34s cubic-bezier(0.3, 1.25, 0.6, 1),
+    rotate 0.34s;
+}
+.note.down {
+  translate: 0 916px;
+  rotate: 0deg;
+}
+/* Its name across the top, which is all that shows once it is lying down. */
+.note-tab {
+  height: 88px;
+  margin: 0 -44px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  font-size: 48px;
+  /* Plain, like the rest of the paper: its title over a double rule. */
+  border-bottom: 9px double var(--form);
+  border-radius: 6px 10px 0 0;
+}
+.note-tab i {
+  font-size: 34px;
+  font-style: normal;
+  color: var(--soft);
+}
+.note header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+}
+/* A little smaller than on the chart, to leave the room to what is written below. */
+.note .photo {
+  width: 116px;
+  height: 116px;
+}
+.note .seal-spot {
+  width: 128px;
+  height: 128px;
+}
+.note .seal-spot .seal {
+  width: 142px;
+  height: 142px;
+  font-size: 32px;
+}
+/* What the doctor decided, first and largest: the five troubles in a line, the circled one in
+   ink and the rest faded back. */
+.note .part.verdict {
+  margin-bottom: 24px;
+}
+.note .dx {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 4px;
+}
+.note .dx span {
+  height: 72px;
+  padding: 0 10px;
+  font-size: 34px;
+  color: var(--form);
+}
+.note .dx span.on {
+  padding: 0 18px;
+  font-size: 44px;
+  color: var(--ink);
+}
+.note .field {
+  margin-bottom: 26px;
+}
+.note .field-icon {
+  width: 62px;
+  height: 62px;
+}
+.note .field small {
+  font-size: 28px;
+}
+/* The tray on the counter where things change hands: a plain tray in the paper's own colour,
+   an ink outline and one line for its rim. It is there whenever someone is at the counter. */
+.salver {
+  position: absolute;
+  left: 150px;
+  top: 934px;
+  width: 566px;
+  height: 126px;
+  z-index: 69;
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: 44px 50px 46px 52px / 40px 44px 42px 46px;
+  box-shadow:
+    inset 0 0 0 10px var(--paper),
+    inset 0 0 0 13px rgba(91, 70, 54, 0.22),
+    0 8px 0 var(--shadow);
+}
+/* The paper bag the chosen fix goes into, standing on the tray. The fix sits between the bag's
+   back and its front, so its top half shows over the edge. */
+.bag {
+  position: absolute;
+  left: 178px;
+  top: 800px;
+  width: 230px;
+  height: 239px;
+  z-index: 70;
+  rotate: -3deg;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 8px 0 var(--shadow));
+  animation: pop-in 0.25s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+.bag-back,
+.bag-front {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.bag-item {
+  position: absolute;
+  left: 40px;
+  top: 4px;
+  width: 150px;
+  height: 160px;
+  animation: bag-drop 0.32s cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+.bag-item svg,
+.bag-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+@keyframes bag-drop {
+  from {
+    translate: 0 -70px;
+    opacity: 0;
+  }
+}
+/* Who it is for, written on the dotted line. */
+.bag-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 27px;
+  font-size: 24px;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  word-spacing: 0.1em;
+}
+/* Handed over: across the counter and into their hands. */
+.bag.given {
+  animation: bag-give 0.5s cubic-bezier(0.5, 0, 0.7, 0.4) forwards;
+}
+@keyframes bag-give {
+  40% {
+    translate: 20px -60px;
+    scale: 1.05;
+    opacity: 1;
+  }
+  to {
+    translate: 190px -250px;
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+/* The button that does it: the same plain paper button as every other choice, on the tray
+   beside the bag, with the arrow that sends things on their way. */
+.opt.give {
+  left: 432px;
+  top: 916px;
+  width: 268px;
+  height: 116px;
+  gap: 12px;
+  padding: 0 14px;
+  font-size: 50px;
+  rotate: 1.5deg;
+  animation: pop-in 0.25s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+.opt.give .pic img {
+  width: 66px;
+  height: 66px;
+}
+/* A personal trouble, once the toolbox is out: a taped-up sheet in the clinic's one ink, with a
+   picture of the thing itself, what is wrong with it, what to do, and the button that does it. */
+.helpcard {
+  --form: #c9b8a4;
+  --print: #94806d;
+  position: absolute;
+  left: 560px;
+  top: 70px;
+  width: 800px;
+  height: 940px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 50px 56px 46px;
+  text-align: center;
+  rotate: -0.8deg;
+  animation: pop-in 0.25s cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+/* The picture, straight on the paper. */
+.helpcard-art {
+  flex: none;
+  width: 440px;
+  height: 430px;
+  display: grid;
+  place-items: center;
+}
+.helpcard-art img {
+  width: 400px;
+  height: 400px;
+  object-fit: contain;
+  rotate: 4deg;
+  filter: drop-shadow(0 8px 0 var(--shadow));
+}
+/* What is wrong, written large over a double rule. */
+.helpcard h2 {
+  align-self: stretch;
+  margin: 6px 0 0;
+  padding-bottom: 10px;
+  font-size: 68px;
+  font-weight: normal;
+  line-height: 1.2;
+  border-bottom: 9px double var(--form);
+}
+.helpcard p {
+  margin: 10px 0 0;
+  font-size: 42px;
+  line-height: 1.3;
+  color: var(--print);
+}
+/* What to do about it: a plain paper button, like the other choices. */
+.opt.act {
+  position: static;
+  flex: none;
+  width: 440px;
+  height: 124px;
+  margin-top: auto;
+  font-size: 60px;
+  rotate: 1.2deg;
+}
+/* What the patient says on being handed it: the same bubble as at the door, up beside their
+   head with its tail down toward them, over the shelf for the moment it takes to read. */
+.talk.reply {
+  left: 700px;
+  top: 84px;
+  bottom: auto;
+  z-index: 76;
+  text-align: center;
+  rotate: -1.5deg;
+  transform-origin: 10% 100%;
+}
+.talk.reply::before {
+  left: 76px;
+  bottom: -37px;
+  rotate: -45deg;
+}
+
+/* ---------- title, morning line-up, pause, the day's log ---------- */
+
+.screen {
+  z-index: 95;
+  animation: fade-in 0.25s;
+}
+.screen::before {
+  background: var(--sky);
+}
+/* A veil over a screen's backdrop, so the paper and the staff stand out from it. */
+.wash {
+  position: absolute;
+  inset: -700px -1100px;
+  z-index: 1;
+  pointer-events: none;
+  background: rgba(255, 249, 238, 0.28);
+}
+.summary .wash {
+  background: rgba(40, 36, 78, 0.3);
+}
+/* Two strips of tape holding a paper up. */
+.taped::before,
+.taped::after {
+  content: '';
+  position: absolute;
+  top: -24px;
+  width: 150px;
+  height: 48px;
+  background: rgba(255, 226, 150, 0.82);
+  border: 3px solid rgba(91, 70, 54, 0.28);
+  border-radius: 6px;
+}
+.taped::before {
+  left: 60px;
+  rotate: -7deg;
+}
+.taped::after {
+  right: 60px;
+  rotate: 6deg;
+}
+.tag.big.start {
+  position: absolute;
+  /* Above the counter, which is drawn in front of the staff. */
+  z-index: 60;
+  margin: 0;
+  rotate: -1.5deg;
+}
+
+/* The title: the clinic's sign, hung on two cords. */
+.signboard {
+  position: absolute;
+  left: 470px;
+  top: 64px;
+  width: 980px;
+  height: 500px;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 26px 40px 18px;
+  rotate: -1.2deg;
+  background: #fff;
+  border-width: 8px;
+  box-shadow: 0 14px 0 var(--shadow);
+  animation: sign-in 0.7s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.signboard::before,
+.signboard::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  width: 8px;
+  height: 400px;
+  background: var(--ink);
+  border-radius: 4px;
+}
+.signboard::before {
+  left: 150px;
+}
+.signboard::after {
+  right: 150px;
+}
+@keyframes sign-in {
+  from {
+    translate: 0 -620px;
+  }
+}
+.signboard img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.signboard h1 {
+  font-size: 124px;
+}
+/* The shadow each of the title's staff stands on. */
+.ground-shadow {
+  position: absolute;
+  width: 260px;
+  height: 30px;
+  z-index: 3;
+  background: rgba(91, 70, 54, 0.2);
+  border-radius: 50%;
+}
+/* The title's papers are in the clinic's one ink, like the rest. */
+.title {
+  --form: #c9b8a4;
+  --print: #94806d;
+}
+/* What this is, written small in the corner of the sky. */
+.fan-note {
+  position: absolute;
+  left: calc(var(--edge-l) + 30px);
+  top: 20px;
+  z-index: 21;
+  margin: 0;
+  font-size: 24px;
+  white-space: nowrap;
+  color: var(--ink);
+  opacity: 0.75;
+}
+/* The language, on a small notice taped high on the right-hand door: the word, a rule, and the
+   two to ring. */
+.door-note {
+  position: absolute;
+  left: 1116px;
+  top: 470px;
+  width: 316px;
+  z-index: 30;
+  padding: 22px 6px 6px;
+  rotate: 2deg;
+  border-width: 4px;
+  box-shadow: 0 6px 0 var(--shadow);
+}
+/* A small notice: one short strip of tape holds it. */
+.door-note.taped::before {
+  left: 50%;
+  top: -18px;
+  width: 110px;
+  height: 36px;
+  margin-left: -55px;
+  rotate: -3deg;
+}
+.door-note.taped::after {
+  display: none;
+}
+.door-note .setting {
+  height: auto;
+  display: grid;
+  gap: 0;
+  padding: 0;
+  text-align: center;
+  font-size: 26px;
+  color: var(--print);
+  border: 0;
+}
+.door-note .setting > span {
+  margin: 0 18px;
+  padding-bottom: 2px;
+  border-bottom: 3px solid var(--form);
+}
+.door-note .choose {
+  justify-content: center;
+  gap: 0;
+}
+.door-note .choose button {
+  min-width: 0;
+  height: 66px;
+  padding: 0 14px;
+  font-size: 31px;
+}
+.door-note .ring {
+  inset: 4px 0;
+  border-width: 6px;
+}
+/* The start button: a signboard standing on the ground in front of the doors, between the staff.
+   A white face in a thick outline, so it stands out from the glass behind it, on two wooden
+   legs. */
+.title .start {
+  left: 730px;
+  top: 800px;
+  width: 460px;
+  height: 196px;
+  font-size: 84px;
+  rotate: 0deg;
+  background: #fff;
+  border-width: 9px;
+  border-radius: 18px 22px 18px 24px;
+  outline-color: var(--mint-d);
+  box-shadow: none;
+  filter: drop-shadow(0 9px 0 var(--shadow));
+}
+.title .start::before,
+.title .start::after {
+  content: '';
+  position: absolute;
+  top: calc(100% + 5px);
+  width: 22px;
+  height: 62px;
+  background: #e2ad72;
+  border: 6px solid var(--ink);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+}
+.title .start::before {
+  left: 54px;
+  rotate: 7deg;
+}
+.title .start::after {
+  right: 54px;
+  rotate: -7deg;
+}
+.title .start span {
+  animation: start-nod 2.6s ease-in-out infinite;
+}
+@keyframes start-nod {
+  50% {
+    translate: 0 -7px;
+  }
+}
+.turn-hint {
+  position: absolute;
+  right: calc(var(--edge-l) + 30px);
+  top: 20px;
+  z-index: 30;
+  margin: 0;
+  font-size: 30px;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+/* The morning line-up. Its paper is in the clinic's one ink: printed parts dull, names darker. */
+.intro {
+  --form: #c9b8a4;
+  --print: #94806d;
+}
+/* The heading, taped to the wall over the three of them. */
+.banner {
+  position: absolute;
+  left: 480px;
+  top: 52px;
+  width: 620px;
+  height: 138px;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding-bottom: 6px;
+  font-size: 68px;
+  line-height: 1.1;
+  white-space: nowrap;
+  rotate: -1deg;
+  /* A double rule under the words, drawn inside the paper. */
+  background:
+    linear-gradient(var(--form) 0 0) 50% 106px / 500px 3px no-repeat,
+    linear-gradient(var(--form) 0 0) 50% 114px / 500px 3px no-repeat,
+    var(--paper);
+}
+/* The day, on a tear-off calendar hanging on the wall: a binding strip along the top with its
+   two rivets, the number printed large, and the rest of the block showing behind the top sheet. */
+.calendar {
+  position: absolute;
+  left: 1510px;
+  top: 64px;
+  width: 320px;
+  height: 390px;
+  z-index: 60;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  padding-top: 62px;
+  line-height: 1;
+  rotate: 2deg;
+  background:
+    radial-gradient(circle, var(--paper) 0 7px, transparent 8px) 70px 20px / 20px 20px no-repeat,
+    radial-gradient(circle, var(--paper) 0 7px, transparent 8px) 230px 20px / 20px 20px no-repeat,
+    linear-gradient(var(--print) 0 0) 0 0 / 100% 60px no-repeat,
+    linear-gradient(var(--ink) 0 0) 0 60px / 100% 5px no-repeat,
+    var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: 10px 10px 6px 8px;
+  box-shadow:
+    5px 9px 0 -3px #f1e7d6,
+    5px 9px 0 3px var(--ink),
+    10px 18px 0 -3px #e9dcc8,
+    10px 18px 0 3px var(--ink),
+    10px 30px 0 3px var(--shadow);
+}
+.calendar b {
+  font-size: 210px;
+  font-weight: normal;
+}
+.calendar small {
+  font-size: 54px;
+  color: var(--print);
+}
+/* A name card standing on the counter under each of them: the job and its room sign printed
+   along the top, the name written in the middle, and where they work printed underneath. */
+.plate {
+  position: absolute;
+  top: 838px;
+  width: 400px;
+  height: 204px;
+  z-index: 60;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  line-height: 1.1;
+  background: var(--paper);
+  border: 6px solid var(--ink);
+  border-radius: 20px 20px 10px 10px;
+  box-shadow: 0 9px 0 var(--shadow);
+}
+.plate:nth-of-type(odd) {
+  rotate: -1.2deg;
+}
+.plate:nth-of-type(even) {
+  rotate: 1deg;
+}
+.plate span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 32px;
+  color: var(--print);
+}
+.plate span svg,
+.plate span img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: grayscale(1) sepia(0.45) opacity(0.6);
+}
+.plate b {
+  font-size: 62px;
+  font-weight: normal;
+  rotate: -1.5deg;
+}
+.plate small {
+  width: 300px;
+  margin-top: 4px;
+  padding-top: 6px;
+  font-size: 28px;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--print);
+  border-top: 3px solid var(--form);
+}
+/* Who has the day off: a slip of the same paper, taped up under the calendar. */
+.sticky {
+  position: absolute;
+  left: 1504px;
+  top: 524px;
+  width: 372px;
+  z-index: 61;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 34px 16px 24px;
+  text-align: center;
+  font-size: 34px;
+  line-height: 1.25;
+  white-space: nowrap;
+  rotate: -3deg;
+  background: var(--paper);
+  border: 5px solid var(--ink);
+  border-radius: 6px 10px 8px 12px;
+  box-shadow: 0 8px 0 var(--shadow);
+}
+.sticky::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  width: 130px;
+  height: 42px;
+  margin-left: -65px;
+  rotate: 4deg;
+  background: rgba(255, 226, 150, 0.82);
+  border: 3px solid rgba(91, 70, 54, 0.28);
+  border-radius: 6px;
+}
+.intro .start {
+  left: 1500px;
+  top: 846px;
+  width: 380px;
+  height: 190px;
+  font-size: 58px;
+  white-space: nowrap;
+  rotate: 2deg;
+}
+/* ----- the line-up arrives -----
+   One timeline, all by delay: the calendar hangs large in the middle (0s), yesterday's page comes
+   off (0.55s), the calendar goes to the wall (1.4s), then the heading, the staff with their
+   cards, the memo and the button turn up in turn. */
+.intro .calendar {
+  animation: cal-settle 0.6s 1.4s cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+@keyframes cal-settle {
+  from {
+    translate: -710px 280px;
+    scale: 1.9;
+  }
+}
+/* Yesterday's page, lying over today's. It peels from its top edge and falls away. */
+.cal-old {
+  position: absolute;
+  inset: 65px 0 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  font-style: normal;
+  background: var(--paper);
+  border-radius: 0 0 2px 4px;
+  transform-origin: 0 0;
+  animation: cal-tear 0.8s 0.55s cubic-bezier(0.4, 0, 0.9, 0.6) both;
+}
+@keyframes cal-tear {
+  25% {
+    translate: 6px 14px;
+    rotate: 5deg;
+    opacity: 1;
+  }
+  to {
+    translate: 90px 520px;
+    rotate: 32deg;
+    opacity: 0;
+  }
+}
+.intro .banner {
+  animation: drop-in 0.4s 1.6s cubic-bezier(0.3, 1.4, 0.6, 1) both;
+}
+@keyframes drop-in {
+  from {
+    translate: 0 -280px;
+  }
+}
+/* The staff step up one after another, each with their card. */
+.intro > .cutout {
+  animation-fill-mode: both;
+}
+.intro > .cutout:nth-of-type(1) {
+  animation-delay: 1.9s;
+}
+.intro > .cutout:nth-of-type(2) {
+  animation-delay: 2.15s;
+}
+.intro > .cutout:nth-of-type(3) {
+  animation-delay: 2.4s;
+}
+.intro .plate {
+  animation: pop-in 0.3s calc(2.05s + var(--i) * 0.25s) cubic-bezier(0.3, 1.5, 0.6, 1) both;
+}
+.intro .sticky {
+  animation: pop-in 0.3s 2.9s cubic-bezier(0.3, 1.5, 0.6, 1) both;
+}
+.intro .start {
+  animation: pop-in 0.35s 3.1s cubic-bezier(0.3, 1.5, 0.6, 1) both;
+}
+/* ----- opening the clinic -----
+   The clinic from outside; the view moves in on the doors, and the screen goes white. */
+.opening {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  animation: fade-in 0.25s;
+}
+.opening > .bg {
+  transform-origin: 50% 64%;
+  animation: push-in 1.7s cubic-bezier(0.4, 0, 0.8, 0.6) both;
+}
+@keyframes push-in {
+  to {
+    scale: 1.55;
+  }
+}
+/* "Open!", on a slip that pops up over the doors. */
+.opening-word {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 600px;
+  width: max-content;
+  margin: 0 auto;
+  padding: 26px 60px 14px;
+  font-size: 96px;
+  line-height: 1.1;
+  rotate: -2deg;
+  animation: pop-in 0.35s 0.2s cubic-bezier(0.3, 1.6, 0.6, 1) both;
+}
+.opening-white,
+.arrive {
+  position: absolute;
+  inset: -700px -1100px;
+  background: #fffaf0;
+  pointer-events: none;
+}
+.opening-white {
+  animation: fade-in 0.6s 1.1s both;
+}
+/* The day begins out of that white. */
+.arrive {
+  z-index: 94;
+  animation: fade-out 0.7s both;
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ----- closing time -----
+   The day's log does not cut in either. The screen comes up out of dusk, a slip says the clinic
+   is shut, and when it has gone the staff and the log arrive. */
+.dusk {
+  position: absolute;
+  inset: -700px -1100px;
+  z-index: 40;
+  background: #3b2a24;
+  pointer-events: none;
+  animation: fade-out 1.1s 0.1s both;
+}
+.closing-word {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 430px;
+  z-index: 41;
+  width: max-content;
+  margin: 0 auto;
+  padding: 30px 70px 18px;
+  font-size: 100px;
+  line-height: 1.1;
+  rotate: -2deg;
+  pointer-events: none;
+  animation: closing-word 2.5s 0.5s both;
+}
+@keyframes closing-word {
+  0% {
+    scale: 0.5;
+    opacity: 0;
+  }
+  12%,
+  78% {
+    scale: 1;
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -120px;
+  }
+}
+.summary > .cutout {
+  animation-fill-mode: both;
+  animation-delay: 2.9s;
+}
+.summary > .cutout ~ .cutout {
+  animation-delay: 3.1s;
+}
+.summary > .cutout ~ .cutout ~ .cutout {
+  animation-delay: 3.3s;
+}
+/* The shadows under the staff come with them. */
+.summary .ground-shadow {
+  z-index: 4;
+  animation: fade-in 0.3s 3.1s both;
+}
+.summary .report {
+  animation: report-in 0.5s 3s cubic-bezier(0.3, 1.2, 0.6, 1) both;
+}
+@keyframes report-in {
+  from {
+    translate: 0 -1100px;
+  }
+}
+
+.stage[lang='en'] .results span {
+  font-size: 25px;
+}
+.stage[lang='en'] .sticky {
+  font-size: 29px;
+}
+.stage[lang='en'] .intro .start {
+  font-size: 50px;
+  white-space: normal;
+}
+
+/* The day's log: a sheet taped up beside the staff. */
+/* The day's log and the pause note are written by hand like the clinic's other papers: the
+   sheet's own lines and captions in one dull ink, the writing darker, and red pen for marks. */
+.report,
+.pause .card {
+  --form: #c9b8a4;
+  --print: #94806d;
+}
+.report {
+  position: absolute;
+  left: 850px;
+  top: 56px;
+  width: 1020px;
+  height: 968px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 46px 52px 40px;
+  text-align: center;
+  rotate: 0.6deg;
+}
+/* The heading, over a double rule. It keeps clear of the seal in the corner. */
+.report h1 {
+  align-self: stretch;
+  margin: 0;
+  padding: 0 170px 12px 0;
+  font-size: 66px;
+  font-weight: normal;
+  line-height: 1.15;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 9px double var(--form);
+}
+/* The doctor's seal on the day's log. */
+.report .seal {
+  position: absolute;
+  right: 44px;
+  top: 30px;
+  width: 150px;
+  height: 150px;
+  font-size: 34px;
+  border-width: 9px;
+  background: rgba(255, 249, 238, 0.7);
+}
+.report .hint {
+  flex: 1;
+  font-size: 40px;
+  color: var(--print);
+}
+/* The three totals: three boxes side by side, a printed caption over a written number. */
+.totals {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 3px solid var(--form);
+  border-radius: 10px 14px 10px 16px;
+}
+.totals > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  height: 116px;
+}
+.totals > div + div {
+  border-left: 3px solid var(--form);
+}
+.totals small {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 32px;
+  color: var(--print);
+}
+.totals b {
+  font-size: 84px;
+  font-weight: normal;
+  line-height: 1;
+  rotate: -3deg;
+}
+/* Red pen: a circle for spot on, a triangle for not quite. No mark is a pencil dash. */
+.mark {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mark .none {
+  stroke: var(--form);
+}
+.totals .mark {
+  width: 40px;
+  height: 40px;
+}
+/* The paper card the pause menu sits on. */
+.card {
+  position: absolute;
+  left: 310px;
+  top: 80px;
+  width: 1300px;
+  height: 920px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 44px 70px 50px;
+  text-align: center;
+}
+/* Everyone who came, two to a row: the mark, the name, and what came of it, on a ruled line. */
+.results {
+  width: 100%;
+  margin: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 34px;
+  text-align: left;
+  white-space: nowrap;
+  /* Takes the space between the totals and the button, and scrolls inside it on a busy day.
+     The bottom edge fades out, which is the hint that there is more below. */
+  flex: 1 1 0;
+  min-height: 0;
+  align-content: start;
+  /* Rows keep their own height instead of squeezing to fit. */
+  grid-auto-rows: max-content;
+  padding: 0 4px 34px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 44px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 44px), transparent);
+}
+.results li {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: center;
+  column-gap: 14px;
+  padding: 10px 0 8px;
+  overflow: hidden;
+  line-height: 1.15;
+  border-bottom: 3px solid var(--form);
+}
+.results .mark {
+  grid-row: 1 / 3;
+}
+.results b {
+  font-size: 42px;
+  font-weight: normal;
+}
+.results span {
+  font-size: 30px;
+  color: var(--print);
+}
+.pause {
+  z-index: 96;
+}
+/* The pause note: the settings as lines on a taped-up sheet, with today's nurse standing beside it. */
+.pause .card {
+  left: 620px;
+  top: 150px;
+  width: 1120px;
+  /* As tall as its three lines and its buttons need, and no taller. */
+  height: 780px;
+  gap: 14px;
+  padding: 46px 76px 44px;
+  rotate: 0.6deg;
+}
+.pause h1 {
+  align-self: stretch;
+  margin: 0;
+  padding-bottom: 10px;
+  font-size: 80px;
+  font-weight: normal;
+  line-height: 1.15;
+  border-bottom: 9px double var(--form);
+}
+.settings {
+  width: 100%;
+  display: grid;
+  margin-top: 4px;
+}
+/* One setting to a line: its name on the left, and its choices on the right, to ring. */
+.setting {
+  height: 128px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 0 6px;
+  font-size: 52px;
+  border-bottom: 3px solid var(--form);
+}
+.choose {
+  display: flex;
+  gap: 18px;
+}
+.choose button {
+  position: relative;
+  min-width: 170px;
+  height: 92px;
+  padding: 0 34px;
+  font-size: 44px;
+  white-space: nowrap;
+  color: var(--print);
+}
+.choose button.on {
+  color: var(--ink);
+}
+/* A choice in the Latin alphabet is written in the hand that has small letters for it. */
+.choose button.latin {
+  font-family: 'Yomogi', 'Zen Maru Gothic', sans-serif;
+  letter-spacing: normal;
+  -webkit-text-stroke: 0.022em currentColor;
+}
+.choose .ring {
+  inset: 0 2px;
+}
+.pause-buttons {
+  width: 100%;
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+}
+.pause-buttons .big {
+  margin: 0;
+  rotate: -1.5deg;
+}
+/* Closing early: a plain slip of the same paper. */
+.tag.end {
+  height: 104px;
+  padding: 0 32px;
+  font-size: 42px;
+  white-space: nowrap;
+  rotate: 2deg;
+  box-shadow: 0 6px 0 var(--shadow);
+}
+
+/* ---------- English runs longer than Japanese ---------- */
+
+/* ちいかフォント has only wide capitals for Latin, which overflow every label, so English is set
+   in Yomogi with normal spacing. */
+.stage[lang='en'] {
+  font-family: 'Yomogi', 'Zen Maru Gothic', sans-serif;
+  letter-spacing: normal;
+  word-spacing: normal;
+  -webkit-text-stroke: 0.022em currentColor;
+}
+.stage[lang='en'] .talk {
+  font-size: 46px;
+}
+.stage[lang='en'] .talk.cry {
+  font-size: 58px;
+}
+.stage[lang='en'] .talk.shout {
+  font-size: 74px;
+}
+.stage[lang='en'] .seen {
+  font-size: 34px;
+}
+.stage[lang='en'] .opt {
+  font-size: 42px;
+}
+.stage[lang='en'] .sign {
+  font-size: 28px;
+}
+.stage[lang='en'] .chart-paper {
+  grid-template-columns: 1fr 440px;
+  font-size: 33px;
+}
+.stage[lang='en'] .dx button,
+.stage[lang='en'] .dx span {
+  font-size: 30px;
+}
+.stage[lang='en'] .ticks button {
+  font-size: 34px;
+}
+.stage[lang='en'] .note .dx {
+  justify-content: center;
+}
+.stage[lang='en'] .note .dx span {
+  height: 60px;
+  font-size: 32px;
+}
+.stage[lang='en'] .note .dx span.on {
+  font-size: 38px;
+}
+.stage[lang='en'] .guide {
+  font-size: 36px;
+}
+.stage[lang='en'] .guide tbody th {
+  font-size: 38px;
+}
+.stage[lang='en'] .guide td.says {
+  font-size: 32px;
+}
+.stage[lang='en'] .guide thead th,
+.stage[lang='en'] .guide .legend {
+  font-size: 28px;
+}
+.stage[lang='en'] .tag.give {
+  gap: 10px;
+  font-size: 38px;
+}
+.stage[lang='en'] .tag.give svg {
+  width: 70px;
+  height: 70px;
+}
+.stage[lang='en'] .bag-name {
+  font-size: 22px;
+}
+.stage[lang='en'] .shelf-tag {
+  font-size: 26px;
+  line-height: 1.35;
+}
+.stage[lang='en'] .note {
+  font-size: 36px;
+}
+.stage[lang='en'] .tray button {
+  font-size: 32px;
+}

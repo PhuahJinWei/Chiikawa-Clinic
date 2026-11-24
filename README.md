@@ -7,6 +7,8 @@ ache, a bruise, or a small disaster of their own, such as a snapped fork or a ca
 open. You see each of them through from the front door to the help counter, playing whoever is
 on shift in each room.
 
+**Play it here: https://phuahjinwei.github.io/Chiikawa-Clinic/**
+
 ![The title screen: the clinic from outside, with the staff standing in front](docs/screenshots/title.jpg)
 
 > This is an unofficial, non-commercial fan game made for fun and for friends. It is not

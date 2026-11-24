@@ -1,4 +1,4 @@
-// Tiny synthesised sound effects, so the prototype needs no audio files.
+// Tiny synthesised sound effects, so the game needs no audio files.
 import { signal } from '@preact/signals';
 
 export const soundOn = signal(true);

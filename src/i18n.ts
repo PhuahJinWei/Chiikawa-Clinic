@@ -28,7 +28,7 @@ export const fmt = (l: L10n, vars: Record<string, string | number>): string =>
 
 export const UI = {
   title: { ja: 'ちいかわクリニック', en: 'Chiikawa Clinic' },
-  fanNote: { ja: 'ひこうしき ファンゲーム・しさくばん', en: 'Unofficial fan game (prototype)' },
+  fanNote: { ja: 'ひこうしき ファンゲーム', en: 'Unofficial fan game' },
   start: { ja: 'はじめる', en: 'Start' },
   turnPhone: { ja: 'スマホを よこむきに もってね', en: 'Hold your phone sideways' },
 

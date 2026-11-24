@@ -29,7 +29,7 @@ Add `?day=60` to the address to make a clinic day last 60 seconds instead of 5 m
 ## Versions and updates
 
 The title screen shows which build is running in its top-right corner, for example
-`v0.1.0  2026-11-24  548f043`: the version from `package.json` (bump it by hand when you want
+`v1.0.0  2026-11-24  548f043`: the version from `package.json` (bump it by hand when you want
 to), then the date and short id of the commit the build was made from (automatic).
 
 Every build also writes the same stamp to `version.json`. The published game fetches that file

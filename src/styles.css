@@ -2153,10 +2153,20 @@ i {
   top: 20px;
   z-index: 21;
   margin: 0;
-  font-size: 30px;
+  font-size: 40px;
+  line-height: 1;
   white-space: nowrap;
   color: var(--ink);
-  opacity: 0.75;
+  /* Solid, with a pale edge, so it reads over cloud and sky alike. The version in the other
+     corner is written the same way. */
+  text-shadow:
+    0 0 6px #fff,
+    0 0 6px #fff,
+    0 0 12px #fff;
+}
+/* The English hand is thin pen strokes at this size, so it is thickened a little, as the version is. */
+.stage[lang='en'] .fan-note {
+  -webkit-text-stroke: 0.03em currentColor;
 }
 /* Which build this is, in the other corner of the sky. Digits and Latin letters, so in the
    hand that has them. */

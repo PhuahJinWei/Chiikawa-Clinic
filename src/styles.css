@@ -237,11 +237,10 @@ i {
 }
 .bg {
   z-index: 0;
-  transition: opacity 4s ease-in-out;
 }
-/* A later time of day, waiting on top of the current one for the clock to reach it. */
-.bg.later {
-  opacity: 0;
+/* A later time of day, coming in over the one before as the clock reaches it. */
+.bg.fade {
+  animation: fade-in 4s ease-in-out;
 }
 .fg {
   z-index: 50;
@@ -260,10 +259,15 @@ i {
   pointer-events: none;
   background: radial-gradient(ellipse 74% 84% at 50% 50%, transparent 56%, rgba(58, 42, 36, 0.3) 100%);
 }
-/* Film grain. It only ever moves by being shifted, so it costs nothing to animate. */
+/* Film grain. It only ever moves by being shifted, so it costs nothing to animate. It covers what
+   the screen shows and just enough past it for the shifts, no more: a layer this size is kept in
+   memory whole, and on a phone that adds up. */
 .grain {
   position: absolute;
-  inset: -800px -1300px;
+  left: calc(var(--vis-l) - 140px);
+  top: calc(var(--vis-t) - 140px);
+  width: calc(var(--vis-w) + 280px);
+  height: calc(var(--vis-h) + 280px);
   z-index: 79;
   pointer-events: none;
   background-size: 320px 320px;

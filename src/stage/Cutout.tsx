@@ -91,21 +91,29 @@ const bgByTime = (id: SceneId) => {
 };
 
 /**
- * A room's background. A room drawn at several times of day keeps them stacked, later ones on top,
- * and each fades in when the clinic clock reaches it.
+ * A room's background. A room drawn at several times of day shows the one for the clinic clock,
+ * and when the clock moves on while you are in the room the next fades in over it. Only what is
+ * showing is kept on the page: these are the biggest pictures in the game, and a phone that runs
+ * short of memory reloads the page.
  */
 export function Bg({ id }: { id: SceneId }) {
+  const now = TIMES.indexOf(timeOfDay.value);
+  // The time of day when this room was walked into. Nothing fades in for being there already.
+  const cameAt = useRef(now).current;
   const urls = bgByTime(id);
   if (!urls.some(Boolean)) return <BgArt id={id} />;
-  const now = TIMES.indexOf(timeOfDay.value);
+  // The pictures the room has, each with the time of day it starts at.
+  const stages = urls.flatMap((url, from) => (url && url !== urls[from - 1] ? [{ url, from }] : []));
+  const at = stages.reduce((last, s, i) => (s.from <= now ? i : last), -1);
+  const current = stages[at];
+  // The one before stays underneath only while the new one fades in over it.
+  const changed = !!current && current.from > cameAt;
+  const under = changed ? stages[at - 1] : undefined;
   return (
     <>
       {!urls[0] && <BgArt id={id} />}
-      {urls.map((url, i) =>
-        url && url !== urls[i - 1] ? (
-          <img key={TIMES[i]} class={cls('bg', i > now && 'later')} src={url} alt="" draggable={false} />
-        ) : null,
-      )}
+      {under && <img key={under.from} class="bg" src={under.url} alt="" draggable={false} />}
+      {current && <img key={current.from} class={cls('bg', changed && 'fade')} src={current.url} alt="" draggable={false} />}
     </>
   );
 }

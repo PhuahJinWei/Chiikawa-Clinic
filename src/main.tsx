@@ -9,6 +9,16 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('contextmenu', e => e.preventDefault());
 // iOS only shows a button's pressed look when the page listens for touches.
 document.addEventListener('touchstart', () => {}, { passive: true });
+// A finger dragged down the screen must not pull the page: on an iPhone that reloads it
+// (Safari's pull-to-refresh), which throws the day away. Nothing but the results list scrolls, so
+// every other drag is kept from the browser. Taps, and dragging the throat view, are unaffected.
+document.addEventListener(
+  'touchmove',
+  e => {
+    if (!(e.target instanceof Element && e.target.closest('.results'))) e.preventDefault();
+  },
+  { passive: false },
+);
 // Only the results list is meant to scroll. If a browser scrolls anything else (older ones can
 // when focus moves), put it straight back, otherwise the stage would stay shifted with no way to
 // drag it home.

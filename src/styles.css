@@ -2167,12 +2167,19 @@ i {
   z-index: 21;
   margin: 0;
   font-family: 'Yomogi', 'Zen Maru Gothic', sans-serif;
-  font-size: 30px;
-  letter-spacing: normal;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: 0.02em;
   word-spacing: normal;
   white-space: pre;
   color: var(--ink);
-  opacity: 0.75;
+  /* Thin pen strokes at this size: thickened a little, with a pale edge so it reads over cloud
+     and sky alike. */
+  -webkit-text-stroke: 0.03em currentColor;
+  text-shadow:
+    0 0 6px #fff,
+    0 0 6px #fff,
+    0 0 12px #fff;
 }
 /* The language, on a small notice taped high on the right-hand door: the word, a rule, and the
    two to ring. */

@@ -1,20 +1,21 @@
 // The doctor's room, seen from the doctor's desk. The chart peeks in from the right; tapping it,
 // or the patient, turns the camera toward the side desk, with the patient still in view on the
-// left, and tapping the patient again turns back. The doctor's
-// one instrument is a light for looking down the throat, moved around by dragging. Circling what it showed lets the chart
+// left, and tapping the patient again turns back. The doctor can ask what is wrong, which goes on
+// the chart if the nurse did not ask, and has
+// one instrument: a light for looking down the throat, moved around by dragging. Circling what it showed lets the chart
 // name the trouble by itself when it can; circling a trouble ends the examination at once.
 
 import { useEffect, useState } from 'preact/hooks';
-import { EXAM_KINDS, EXAM_NAME, candidatesFor } from '../game/data';
-import { EXIT_MS, circle, examine, patients, shift, stamp, tickExam } from '../game/state';
+import { CHARACTERS, EXAM_KINDS, EXAM_NAME, candidatesFor, complaintOf } from '../game/data';
+import { EXIT_MS, circle, examine, interview, patients, shift, stamp, tickExam } from '../game/state';
 import type { ExamKind, Finding, Patient, ProblemId } from '../game/types';
 import { UI, tr } from '../i18n';
 import { sfx } from '../sfx';
 import { cls } from '../stage/assets';
 import { Bg, Cutout, Desk, Fg, useArrivals } from '../stage/Cutout';
-import { BookPic, ChartPic, Tool } from '../stage/Props';
+import { BookPic, ChartPic, NotePic, Tool } from '../stage/Props';
 import { Chart, Guide } from '../ui/Chart';
-import { Tick } from '../ui/Talk';
+import { Bubble, Tick } from '../ui/Talk';
 import { Scope } from '../ui/Scope';
 
 /** Where the patient stands, in front of the chair and close to the doctor's desk. */
@@ -29,12 +30,14 @@ interface Exam {
   id: number;
   inset: { kind: ExamKind; f: Finding } | null;
   seen: ExamKind[];
+  /** The patient has just been asked, and their answer is up. */
+  said: boolean;
   /** The chart no longer takes circles. */
   locked: boolean;
   /** The seal is on it. */
   sealed: boolean;
 }
-const fresh = (id: number): Exam => ({ id, inset: null, seen: [], locked: false, sealed: false });
+const fresh = (id: number): Exam => ({ id, inset: null, seen: [], said: false, locked: false, sealed: false });
 
 const full = (p: Patient) => EXAM_KINDS.every(k => p.chart.exams[k]);
 
@@ -60,12 +63,21 @@ export function Doctor() {
     setOpen(false);
     // Nothing says what the light shows: finding it, and circling the chart to match, is the
     // doctor's job.
-    patch(p.id, { inset: { kind, f: examine(p.id, kind) }, seen: ex.seen.includes(kind) ? ex.seen : [...ex.seen, kind] });
+    patch(p.id, { said: false, inset: { kind, f: examine(p.id, kind) }, seen: ex.seen.includes(kind) ? ex.seen : [...ex.seen, kind] });
+  };
+
+  // Asking gets the trouble out of anyone, as it does for the nurse. It goes on the chart, so a
+  // patient sent in without being asked can still be asked here.
+  const ask = () => {
+    if (!p || ex.locked) return;
+    sfx.tap();
+    interview(p.id);
+    patch(p.id, { said: true, inset: null });
   };
 
   const conclude = (id: number, dx: ProblemId) => {
     circle(id, dx);
-    patch(id, { locked: true, sealed: true });
+    patch(id, { said: false, locked: true, sealed: true });
     sfx.stamp();
     // The seal sits a moment, then they get up and go out to the counter.
     window.setTimeout(() => setLeaving(id), LEAVE_MS);
@@ -93,8 +105,8 @@ export function Doctor() {
   const turn = (to: boolean) => {
     sfx.page();
     setOpen(to);
-    // Turning to the chart puts the penlight down.
-    if (to && p) patch(p.id, { inset: null });
+    // Turning to the chart puts the penlight down, and ends the talk.
+    if (to && p) patch(p.id, { inset: null, said: false });
   };
   const readGuide = () => {
     sfx.page();
@@ -131,8 +143,27 @@ export function Doctor() {
             chart can be turned to straight from looking. */}
         {p && ex.inset && !open && <Scope key={p.id} f={ex.inset.f} onClose={() => patch(p.id, { inset: null })} />}
 
-        {/* The doctor's two things to do, as plain buttons beside the patient: look down the
-            throat, and turn to the chart. A throat already looked at is ticked. */}
+        {/* What they answer when asked: their words over their head, and what it comes to on a
+            strip of note paper by the button. A tap on either puts both away. */}
+        {p && ex.said && !open && (
+          <div class="doc-said" onClick={() => patch(p.id, { said: false })}>
+            <Bubble who={CHARACTERS[p.char]} say={tr(p.told)} reply />
+            <p class="seen">
+              <NotePic kind="ear" />
+              <span>{tr(complaintOf(p.char, p.problem))}</span>
+            </p>
+          </div>
+        )}
+
+        {/* The doctor's three things to do, as plain buttons beside the patient: ask, look down
+            the throat, and turn to the chart. What is already known or looked at is ticked. */}
+        <button class="tag opt dq" disabled={!p || ex.locked} onClick={ask}>
+          <i class="pic">
+            <NotePic kind="ear" />
+          </i>
+          <span>{tr(UI.ask)}</span>
+          {p?.chart.complaint && <Tick />}
+        </button>
         {EXAM_KINDS.map(k => (
           <button key={k} class="tag opt d0" disabled={!p || ex.locked} onClick={() => look(k)}>
             <i class="pic">
@@ -170,14 +201,30 @@ export function Doctor() {
         <Desk />
         {p && <Chart p={p} locked={ex.locked} sealed={ex.sealed} doctor={shift.value.doctor} maybe={maybe} onTick={onTick} onPick={onPick} />}
         <div class="tray">
+          {/* These stop their tap from reaching the desk. Looking puts the chart away, and by the
+              time the tap reached the desk it would find the chart closed and open it again,
+              which also puts the light down. */}
           {EXAM_KINDS.map(k => (
-            <button key={k} disabled={!p || ex.locked} onClick={() => look(k)}>
+            <button
+              key={k}
+              disabled={!p || ex.locked}
+              onClick={e => {
+                e.stopPropagation();
+                look(k);
+              }}
+            >
               <Tool />
               {tr(EXAM_NAME[k])}
               {ex.seen.includes(k) && <Tick />}
             </button>
           ))}
-          <button class="book" onClick={readGuide}>
+          <button
+            class="book"
+            onClick={e => {
+              e.stopPropagation();
+              readGuide();
+            }}
+          >
             <BookPic />
             {tr(UI.guideShort)}
           </button>

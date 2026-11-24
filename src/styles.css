@@ -1061,9 +1061,26 @@ i {
 /* ---------- doctor room ---------- */
 
 /* The doctor's two buttons, one over the other, low on the right beside the patient. */
+.opt.dq,
 .opt.d0,
 .opt.d1 {
   left: 1390px;
+}
+.opt.dq {
+  top: 416px;
+  rotate: 0.8deg;
+}
+/* Asked: their answer over their head, with its tail down toward them, and what it comes to on
+   the note strip just above the button that asked. */
+.doc-said .talk.reply {
+  left: 620px;
+  top: 60px;
+  max-width: 700px;
+}
+.doc-said .seen {
+  left: 1330px;
+  top: 300px;
+  width: 500px;
 }
 .opt.d0 {
   top: 548px;

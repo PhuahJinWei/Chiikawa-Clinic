@@ -50,6 +50,15 @@ function canvas(w: number, h: number, paint: (px: Uint8ClampedArray) => void): s
   }
 }
 
+/**
+ * Safari cannot draw the peephole: its engine (WebKit, which every browser on an iPhone or iPad
+ * uses too) mishandles an SVG filter with an image in it when the filter is put on ordinary page
+ * content, and shows a blur with nothing in it. There is no way to ask a browser whether it can,
+ * so this goes by its name. Those browsers get the flat view under the same dark rim.
+ */
+export const isWebKit = (ua: string): boolean => /AppleWebKit/.test(ua) && !/Chrome|Chromium|Edg\/|OPR\/|Android/.test(ua);
+const canBend = typeof navigator === 'undefined' || !isWebKit(navigator.userAgent);
+
 let map: string | null | undefined;
 
 /**
@@ -102,7 +111,7 @@ const only = (r: number, g: number, b: number) => `${r} 0 0 0 0  0 ${g} 0 0 0  0
  * Returns the CSS `filter` value to put on the layer, or nothing if the effect is unavailable.
  */
 export function peephole(): { defs: JSX.Element | null; filter: string | undefined } {
-  const url = lensOn.value ? lensMap() : null;
+  const url = lensOn.value && canBend ? lensMap() : null;
   if (!url) return { defs: null, filter: undefined };
   const s = MAX_SHIFT * 2;
   const bend = (scale: number, result: string) => (
